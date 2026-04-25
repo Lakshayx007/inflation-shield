@@ -1,0 +1,353 @@
+[
+    {
+        "co_code":  33769,
+        "short_name":  "BHEL",
+        "quarter":  "2013-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.019101538041130323,
+        "shipped_prob":  0.21757259114056188,
+        "recovered":  false
+    },
+    {
+        "co_code":  34162,
+        "short_name":  "AIRTEL",
+        "quarter":  "2012-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.23150051653369536,
+        "shipped_prob":  0.30340642752791913,
+        "recovered":  false
+    },
+    {
+        "co_code":  47858,
+        "short_name":  "CIPLA",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.41531131824190404,
+        "shipped_prob":  0.2981394746153416,
+        "recovered":  false
+    },
+    {
+        "co_code":  48799,
+        "short_name":  "COAL INDIA",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.0846907062744658,
+        "shipped_prob":  0.04885841825487757,
+        "recovered":  false
+    },
+    {
+        "co_code":  62987,
+        "short_name":  "DR. REDDY\u0027S",
+        "quarter":  "2013-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.008824004487134435,
+        "shipped_prob":  0.038105276042871096,
+        "recovered":  false
+    },
+    {
+        "co_code":  62987,
+        "short_name":  "DR. REDDY\u0027S",
+        "quarter":  "2013-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.06603975407418598,
+        "shipped_prob":  0.24450557059345407,
+        "recovered":  false
+    },
+    {
+        "co_code":  79498,
+        "short_name":  "GAIL",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.036888768193003074,
+        "shipped_prob":  0.12010069690752807,
+        "recovered":  false
+    },
+    {
+        "co_code":  79498,
+        "short_name":  "GAIL",
+        "quarter":  "2013-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.11549458560335646,
+        "shipped_prob":  0.22574816754436042,
+        "recovered":  false
+    },
+    {
+        "co_code":  88297,
+        "short_name":  "HDFC",
+        "quarter":  "2013-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.266573846646701,
+        "shipped_prob":  0.15108634991393297,
+        "recovered":  false
+    },
+    {
+        "co_code":  92590,
+        "short_name":  "HEROMOTOCO",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.47961038266797684,
+        "shipped_prob":  0.4186064614701299,
+        "recovered":  false
+    },
+    {
+        "co_code":  92590,
+        "short_name":  "HEROMOTOCO",
+        "quarter":  "2013-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.025472017486584647,
+        "shipped_prob":  0.1503415462819789,
+        "recovered":  false
+    },
+    {
+        "co_code":  93902,
+        "short_name":  "HINDALCO",
+        "quarter":  "2012-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.01832989395811855,
+        "shipped_prob":  0.045689835555850405,
+        "recovered":  false
+    },
+    {
+        "co_code":  93902,
+        "short_name":  "HINDALCO",
+        "quarter":  "2013-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.024871566323742284,
+        "shipped_prob":  0.05317093520972034,
+        "recovered":  false
+    },
+    {
+        "co_code":  93902,
+        "short_name":  "HINDALCO",
+        "quarter":  "2013-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.022822161406581085,
+        "shipped_prob":  0.011241959335599825,
+        "recovered":  false
+    },
+    {
+        "co_code":  96379,
+        "short_name":  "ICICIBANK",
+        "quarter":  "2013-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.08943528794975854,
+        "shipped_prob":  0.4075534151628486,
+        "recovered":  false
+    },
+    {
+        "co_code":  100632,
+        "short_name":  "INFOSYS",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.15505459940572824,
+        "shipped_prob":  0.01962328488349731,
+        "recovered":  false
+    },
+    {
+        "co_code":  100632,
+        "short_name":  "INFOSYS",
+        "quarter":  "2012-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.10104436352175732,
+        "shipped_prob":  0.020078660253491875,
+        "recovered":  false
+    },
+    {
+        "co_code":  100632,
+        "short_name":  "INFOSYS",
+        "quarter":  "2013-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.4427225749802942,
+        "shipped_prob":  0.011178222763391312,
+        "recovered":  false
+    },
+    {
+        "co_code":  127106,
+        "short_name":  "LARSEN \u0026 TOUBRO",
+        "quarter":  "2012-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.2104137262974528,
+        "shipped_prob":  0.21479409830961443,
+        "recovered":  false
+    },
+    {
+        "co_code":  127106,
+        "short_name":  "LARSEN \u0026 TOUBRO",
+        "quarter":  "2013-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.49529234371577424,
+        "shipped_prob":  0.6947667847176017,
+        "recovered":  true
+    },
+    {
+        "co_code":  136444,
+        "short_name":  "M\u0026M",
+        "quarter":  "2013-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.28833402254287294,
+        "shipped_prob":  0.8554111992318151,
+        "recovered":  true
+    },
+    {
+        "co_code":  140829,
+        "short_name":  "MARUTI",
+        "quarter":  "2012-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.08376340305826965,
+        "shipped_prob":  0.08772062930697046,
+        "recovered":  false
+    },
+    {
+        "co_code":  140829,
+        "short_name":  "MARUTI",
+        "quarter":  "2013-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.20473656591822392,
+        "shipped_prob":  0.5364590204485175,
+        "recovered":  true
+    },
+    {
+        "co_code":  155695,
+        "short_name":  "NTPC",
+        "quarter":  "2013-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.0612028891919454,
+        "shipped_prob":  0.3810987627051098,
+        "recovered":  false
+    },
+    {
+        "co_code":  155695,
+        "short_name":  "NTPC",
+        "quarter":  "2013-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.35402346230990667,
+        "shipped_prob":  0.017433903436614488,
+        "recovered":  false
+    },
+    {
+        "co_code":  163226,
+        "short_name":  "ONGC",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.05213537155651508,
+        "shipped_prob":  0.13617396976279691,
+        "recovered":  false
+    },
+    {
+        "co_code":  163226,
+        "short_name":  "ONGC",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.2655281111732002,
+        "shipped_prob":  0.6163641647457136,
+        "recovered":  true
+    },
+    {
+        "co_code":  163226,
+        "short_name":  "ONGC",
+        "quarter":  "2012-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.03817223467877335,
+        "shipped_prob":  0.023467057397990845,
+        "recovered":  false
+    },
+    {
+        "co_code":  196667,
+        "short_name":  "RIL",
+        "quarter":  "2013-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.011285948978657603,
+        "shipped_prob":  0.15225068696367147,
+        "recovered":  false
+    },
+    {
+        "co_code":  216946,
+        "short_name":  "SESA GOA",
+        "quarter":  "2012-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.47418893033818976,
+        "shipped_prob":  0.002123942108490158,
+        "recovered":  false
+    },
+    {
+        "co_code":  236328,
+        "short_name":  "SBI",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.30816603677612675,
+        "shipped_prob":  0.362900944325326,
+        "recovered":  false
+    },
+    {
+        "co_code":  236328,
+        "short_name":  "SBI",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.48874163305743284,
+        "shipped_prob":  0.6119610216388799,
+        "recovered":  true
+    },
+    {
+        "co_code":  236328,
+        "short_name":  "SBI",
+        "quarter":  "2013-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.2852514098053644,
+        "shipped_prob":  0.09054012967393238,
+        "recovered":  false
+    },
+    {
+        "co_code":  248093,
+        "short_name":  "TATA MOTORS",
+        "quarter":  "2012-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.18584187448669787,
+        "shipped_prob":  0.6216213949956795,
+        "recovered":  true
+    },
+    {
+        "co_code":  248136,
+        "short_name":  "TATA STEEL",
+        "quarter":  "2012-03-31",
+        "y_true":  1,
+        "pass1_prob":  0.005993134782045476,
+        "shipped_prob":  0.07570993943692939,
+        "recovered":  false
+    },
+    {
+        "co_code":  248136,
+        "short_name":  "TATA STEEL",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.002367401864009524,
+        "shipped_prob":  0.06798306829675789,
+        "recovered":  false
+    },
+    {
+        "co_code":  248136,
+        "short_name":  "TATA STEEL",
+        "quarter":  "2012-09-30",
+        "y_true":  1,
+        "pass1_prob":  0.0052441256635103045,
+        "shipped_prob":  0.014139517744411684,
+        "recovered":  false
+    },
+    {
+        "co_code":  248165,
+        "short_name":  "TATA POWER CO.",
+        "quarter":  "2012-06-30",
+        "y_true":  1,
+        "pass1_prob":  0.011483469671803035,
+        "shipped_prob":  0.24708648132139066,
+        "recovered":  false
+    },
+    {
+        "co_code":  374518,
+        "short_name":  "BAJAJ-AUTO",
+        "quarter":  "2013-12-31",
+        "y_true":  1,
+        "pass1_prob":  0.4559974245097714,
+        "shipped_prob":  0.6543877015768435,
+        "recovered":  true
+    }
+]

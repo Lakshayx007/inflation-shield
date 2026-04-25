@@ -1,0 +1,70 @@
+{
+  "pass1_reference_auc": 0.6692038423966135,
+  "step1_overfit_table": [
+    {
+      "Model": "LGBM tuned",
+      "Train AUC": 1.0,
+      "CV mean AUC": 0.6733419946722049,
+      "CV std": 0.00655852152614908,
+      "Test AUC": 0.7259036144578314
+    },
+    {
+      "Model": "XGBoost",
+      "Train AUC": 0.9999897343243132,
+      "CV mean AUC": 0.6713779758390385,
+      "CV std": 0.00898716069670193,
+      "Test AUC": 0.7385216541843048
+    }
+  ],
+  "step1_overfit_verdict": "XGBoost test deviates materially from CV; possible overfitting/regime mismatch.",
+  "step2_seed_list": [
+    42,
+    1,
+    7,
+    123,
+    999
+  ],
+  "step2_lgbm_seed_aucs": [
+    0.7259036144578314,
+    0.7257408010420059,
+    0.736649299902312,
+    0.7372191468577011,
+    0.721182025398893
+  ],
+  "step2_xgb_seed_aucs": [
+    0.7385216541843048,
+    0.7236242266362749,
+    0.7202865516118527,
+    0.7297297297297298,
+    0.7028655161185282
+  ],
+  "step2_lgbm_mean_std": {
+    "mean": 0.7293389775317486,
+    "std": 0.006431521489755138
+  },
+  "step2_xgb_mean_std": {
+    "mean": 0.7230055356561381,
+    "std": 0.011826755766961062
+  },
+  "step2_gap_vs_combined_std": {
+    "gap": -0.006333441875610468,
+    "combined_std": 0.013462415111878286
+  },
+  "step2_shipped_decision": "Shipped model: LGBM (statistically tied with XGBoost, simpler)",
+  "step3_pass1_fn_total": 39,
+  "step3_pass1_fn_recovered": 7,
+  "step3_pass1_fn_recovery_rate": 0.1794871794871795,
+  "shipped_model": "LGBM tuned",
+  "shipped_test_auc": 0.7259036144578314,
+  "notes": [
+    "Artifacts are fully aligned with shipped model decision (no model mixing).",
+    "Tuned model improved test AUC by >=1pp, accepted."
+  ],
+  "honest_performance_range": {
+    "cv_auc": 0.6733,
+    "test_auc": 0.7259,
+    "seed_mean_test_auc": 0.7293,
+    "seed_std_test_auc": 0.0064,
+    "interpretation": "Real-world AUC likely in 0.67-0.73 range; test set may be slightly easier than CV folds."
+  }
+}

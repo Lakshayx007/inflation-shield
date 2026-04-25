@@ -1,0 +1,212 @@
+[
+  {
+    "sector": "Minerals",
+    "mean_mss": 97.6,
+    "median_mss": 97.6,
+    "n_firms": 1,
+    "top_risk_firm": "SESA GOA",
+    "top_risk_mss": 97.6,
+    "lowest_risk_firm": "SESA GOA",
+    "lowest_risk_mss": 97.6
+  },
+  {
+    "sector": "Crude oil & natural gas",
+    "mean_mss": 84.6,
+    "median_mss": 84.6,
+    "n_firms": 1,
+    "top_risk_firm": "ONGC",
+    "top_risk_mss": 84.6,
+    "lowest_risk_firm": "ONGC",
+    "lowest_risk_mss": 84.6
+  },
+  {
+    "sector": "Telecommunication services",
+    "mean_mss": 67.3,
+    "median_mss": 67.3,
+    "n_firms": 1,
+    "top_risk_firm": "AIRTEL",
+    "top_risk_mss": 67.3,
+    "lowest_risk_firm": "AIRTEL",
+    "lowest_risk_mss": 67.3
+  },
+  {
+    "sector": "Tobacco products",
+    "mean_mss": 66.8,
+    "median_mss": 66.8,
+    "n_firms": 1,
+    "top_risk_firm": "ITC",
+    "top_risk_mss": 66.8,
+    "lowest_risk_firm": "ITC",
+    "lowest_risk_mss": 66.8
+  },
+  {
+    "sector": "Industrial construction",
+    "mean_mss": 64.2,
+    "median_mss": 64.2,
+    "n_firms": 1,
+    "top_risk_firm": "LARSEN & TOUBRO",
+    "top_risk_mss": 64.2,
+    "lowest_risk_firm": "LARSEN & TOUBRO",
+    "lowest_risk_mss": 64.2
+  },
+  {
+    "sector": "Cosmetics, toiletries, soaps & detergents",
+    "mean_mss": 44.8,
+    "median_mss": 44.8,
+    "n_firms": 1,
+    "top_risk_firm": "HINDUNILVR",
+    "top_risk_mss": 44.8,
+    "lowest_risk_firm": "HINDUNILVR",
+    "lowest_risk_mss": 44.8
+  },
+  {
+    "sector": "Commercial vehicles",
+    "mean_mss": 41.1,
+    "median_mss": 41.1,
+    "n_firms": 1,
+    "top_risk_firm": "TATA MOTORS",
+    "top_risk_mss": 41.1,
+    "lowest_risk_firm": "TATA MOTORS",
+    "lowest_risk_mss": 41.1
+  },
+  {
+    "sector": "Drugs & pharmaceuticals",
+    "mean_mss": 40.3,
+    "median_mss": 24.5,
+    "n_firms": 3,
+    "top_risk_firm": "SUN PHARMACEUTICAL",
+    "top_risk_mss": 94.9,
+    "lowest_risk_firm": "CIPLA",
+    "lowest_risk_mss": 1.6
+  },
+  {
+    "sector": "Two & three wheelers",
+    "mean_mss": 34.3,
+    "median_mss": 34.3,
+    "n_firms": 2,
+    "top_risk_firm": "BAJAJ-AUTO",
+    "top_risk_mss": 65.4,
+    "lowest_risk_firm": "HEROMOTOCO",
+    "lowest_risk_mss": 3.1
+  },
+  {
+    "sector": "Computer software",
+    "mean_mss": 24.7,
+    "median_mss": 5.8,
+    "n_firms": 3,
+    "top_risk_firm": "WIPRO",
+    "top_risk_mss": 63.1,
+    "lowest_risk_firm": "INFOSYS",
+    "lowest_risk_mss": 5.2
+  },
+  {
+    "sector": "LNG storage & distribution",
+    "mean_mss": 22.6,
+    "median_mss": 22.6,
+    "n_firms": 1,
+    "top_risk_firm": "GAIL",
+    "top_risk_mss": 22.6,
+    "lowest_risk_firm": "GAIL",
+    "lowest_risk_mss": 22.6
+  },
+  {
+    "sector": "Boilers & turbines",
+    "mean_mss": 21.8,
+    "median_mss": 21.8,
+    "n_firms": 1,
+    "top_risk_firm": "BHEL",
+    "top_risk_mss": 21.8,
+    "lowest_risk_firm": "BHEL",
+    "lowest_risk_mss": 21.8
+  },
+  {
+    "sector": "Banking services",
+    "mean_mss": 17.0,
+    "median_mss": 10.6,
+    "n_firms": 4,
+    "top_risk_firm": "AXIS BANK",
+    "top_risk_mss": 44.4,
+    "lowest_risk_firm": "SBI",
+    "lowest_risk_mss": 2.5
+  },
+  {
+    "sector": "Diversified",
+    "mean_mss": 11.4,
+    "median_mss": 11.4,
+    "n_firms": 1,
+    "top_risk_firm": "M&M",
+    "top_risk_mss": 11.4,
+    "lowest_risk_firm": "M&M",
+    "lowest_risk_mss": 11.4
+  },
+  {
+    "sector": "Electricity generation",
+    "mean_mss": 11.0,
+    "median_mss": 11.0,
+    "n_firms": 2,
+    "top_risk_firm": "TATA POWER CO.",
+    "top_risk_mss": 15.4,
+    "lowest_risk_firm": "NTPC",
+    "lowest_risk_mss": 6.7
+  },
+  {
+    "sector": "Steel",
+    "mean_mss": 5.7,
+    "median_mss": 5.7,
+    "n_firms": 1,
+    "top_risk_firm": "TATA STEEL",
+    "top_risk_mss": 5.7,
+    "lowest_risk_firm": "TATA STEEL",
+    "lowest_risk_mss": 5.7
+  },
+  {
+    "sector": "Passenger vehicles",
+    "mean_mss": 5.4,
+    "median_mss": 5.4,
+    "n_firms": 1,
+    "top_risk_firm": "MARUTI",
+    "top_risk_mss": 5.4,
+    "lowest_risk_firm": "MARUTI",
+    "lowest_risk_mss": 5.4
+  },
+  {
+    "sector": "Other fund based financial services",
+    "mean_mss": 3.2,
+    "median_mss": 3.2,
+    "n_firms": 1,
+    "top_risk_firm": "COAL INDIA",
+    "top_risk_mss": 3.2,
+    "lowest_risk_firm": "COAL INDIA",
+    "lowest_risk_mss": 3.2
+  },
+  {
+    "sector": "Refinery",
+    "mean_mss": 3.2,
+    "median_mss": 3.2,
+    "n_firms": 1,
+    "top_risk_firm": "RIL",
+    "top_risk_mss": 3.2,
+    "lowest_risk_firm": "RIL",
+    "lowest_risk_mss": 3.2
+  },
+  {
+    "sector": "Copper & copper products",
+    "mean_mss": 0.9,
+    "median_mss": 0.9,
+    "n_firms": 1,
+    "top_risk_firm": "HINDALCO",
+    "top_risk_mss": 0.9,
+    "lowest_risk_firm": "HINDALCO",
+    "lowest_risk_mss": 0.9
+  },
+  {
+    "sector": "Housing finance services",
+    "mean_mss": 0.1,
+    "median_mss": 0.1,
+    "n_firms": 1,
+    "top_risk_firm": "HDFC",
+    "top_risk_mss": 0.1,
+    "lowest_risk_firm": "HDFC",
+    "lowest_risk_mss": 0.1
+  }
+]
