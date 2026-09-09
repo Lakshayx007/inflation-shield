@@ -1,0 +1,23 @@
+[
+  "CPR",
+  "ICSI",
+  "IBD",
+  "WCSS",
+  "OL",
+  "SIB",
+  "rm_pct_of_sales",
+  "power_pct_of_sales",
+  "EBITDA_margin_pct",
+  "margin_lag_1",
+  "margin_lag_2",
+  "margin_lag_4",
+  "margin_change_4q",
+  "margin_std_4q",
+  "rm_mix_drift_8q",
+  "log_net_sales",
+  "sector_relative_margin",
+  "CPR_x_ICSI",
+  "sector_enc",
+  "year_enc",
+  "qtr_enc"
+]

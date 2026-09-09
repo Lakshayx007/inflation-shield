@@ -1,0 +1,201 @@
+{
+  "overall": {
+    "auc_roc_ensemble": 0.725,
+    "auc_roc_lgbm": 0.725,
+    "auc_roc_lstm": 0.5393,
+    "brier": 0.1808,
+    "rmse_delta_margin": 9.2,
+    "n_test": 120,
+    "n_train": 1597,
+    "ensemble_weight_lgbm": 0.0,
+    "ensemble_weight_lstm": 1.0
+  },
+  "per_sector": {
+    "Banking services": {
+      "auc": 0.4583,
+      "n": 16
+    },
+    "Boilers & turbines": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Commercial vehicles": {
+      "auc": null,
+      "n": 4
+    },
+    "Computer software": {
+      "auc": 0.0,
+      "n": 12
+    },
+    "Copper & copper products": {
+      "auc": 0.25,
+      "n": 4
+    },
+    "Cosmetics, toiletries, soaps & detergents": {
+      "auc": null,
+      "n": 4
+    },
+    "Crude oil & natural gas": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Diversified": {
+      "auc": 0.6667,
+      "n": 4
+    },
+    "Drugs & pharmaceuticals": {
+      "auc": 0.6857,
+      "n": 12
+    },
+    "Electricity generation": {
+      "auc": 0.625,
+      "n": 8
+    },
+    "Housing finance services": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Industrial construction": {
+      "auc": 0.6667,
+      "n": 4
+    },
+    "LNG storage & distribution": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Minerals": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Other fund based financial services": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Passenger vehicles": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Refinery": {
+      "auc": 1.0,
+      "n": 4
+    },
+    "Steel": {
+      "auc": null,
+      "n": 4
+    },
+    "Telecommunication services": {
+      "auc": null,
+      "n": 4
+    },
+    "Tobacco products": {
+      "auc": 0.75,
+      "n": 4
+    },
+    "Two & three wheelers": {
+      "auc": 0.8667,
+      "n": 8
+    }
+  },
+  "feature_importance": [
+    {
+      "feature": "EBITDA_margin_pct",
+      "importance": 0.3381
+    },
+    {
+      "feature": "margin_lag_2",
+      "importance": 0.2359
+    },
+    {
+      "feature": "margin_lag_4",
+      "importance": 0.1567
+    },
+    {
+      "feature": "margin_change_4q",
+      "importance": 0.1286
+    },
+    {
+      "feature": "OL",
+      "importance": 0.1157
+    },
+    {
+      "feature": "log_net_sales",
+      "importance": 0.1026
+    },
+    {
+      "feature": "margin_std_4q",
+      "importance": 0.0965
+    },
+    {
+      "feature": "margin_lag_1",
+      "importance": 0.0722
+    },
+    {
+      "feature": "sector_relative_margin",
+      "importance": 0.0596
+    },
+    {
+      "feature": "rm_pct_of_sales",
+      "importance": 0.0528
+    },
+    {
+      "feature": "CPR",
+      "importance": 0.0412
+    },
+    {
+      "feature": "SIB",
+      "importance": 0.0401
+    },
+    {
+      "feature": "qtr_enc",
+      "importance": 0.0267
+    },
+    {
+      "feature": "rm_mix_drift_8q",
+      "importance": 0.0231
+    },
+    {
+      "feature": "CPR_x_ICSI",
+      "importance": 0.0227
+    }
+  ],
+  "confusion_matrix": [
+    [
+      79,
+      7
+    ],
+    [
+      23,
+      11
+    ]
+  ],
+  "baseline_auc": 0.5752,
+  "optuna_best_params": {
+    "num_leaves": 41,
+    "learning_rate": 0.055597564843308675,
+    "n_estimators": 58,
+    "min_child_samples": 18,
+    "subsample": 0.5385603522016522,
+    "colsample_bytree": 0.6136919284311061,
+    "reg_alpha": 1.4710197772348287e-05,
+    "reg_lambda": 0.37865575796994655,
+    "max_depth": 8,
+    "objective": "binary",
+    "metric": "auc",
+    "verbosity": -1,
+    "seed": 42,
+    "n_jobs": -1,
+    "scale_pos_weight": 1.0
+  },
+  "notes": [
+    "IBD (Inventory Buffer Days) is ~88% missing due to sparse inventory data",
+    "WCSS (Working Capital Stress) is ~92% missing due to sparse trade_payables",
+    "No macro features included (no WPI/Brent/INR-USD in source data)",
+    "LSTM available for 0/120 test rows",
+    "Data covers 1995-2014; test period is 2012-2013",
+    "30 BSE Sensex firms; 21 sectors (15 single-firm sectors)"
+  ],
+  "honest_performance_range": {
+    "test_auc": 0.725,
+    "interpretation": "Real-world AUC likely in 0.65-0.75 range"
+  }
+}
