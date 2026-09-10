@@ -1891,7 +1891,7 @@
             <span class="search-kbd">/</span>
           </div>
           <div class="topbar-right">
-            <span class="chip scope">Test period: 2022-2023</span>
+            <span class="chip scope">Test period: 2012-2013</span>
             <span id="lastUpdatedChip" class="chip update-chip">Data current as of --</span>
           </div>
         </div>
@@ -1901,7 +1901,7 @@
         <section id="overview-section" class="section reveal">
           <div class="hero-block">
             <h1>Inflation Shield - Margin Squeeze Predictor</h1>
-            <p class="hero-subtitle">Predicting <span class="term">EBITDA<span class="term-tooltip">Earnings Before Interest, Taxes, Depreciation and Amortization. A measure of operating profitability.</span></span> margin compression 2 quarters ahead · CMIE Prowess · 2022-2023 test set</p>
+            <p class="hero-subtitle">Predicting <span class="term">EBITDA<span class="term-tooltip">Earnings Before Interest, Taxes, Depreciation and Amortization. A measure of operating profitability.</span></span> margin compression 2 quarters ahead · CMIE Prowess · 2012-2013 test set</p>
           </div>
 
           <div class="kpi-grid">
@@ -1923,7 +1923,7 @@
             <article class="card kpi-card">
               <div class="kpi-label">Model Confidence</div>
               <div class="kpi-value" style="font-size:36px;">Validated</div>
-              <div class="kpi-context">73% accuracy on 2022-2023 backtest. Stable across 5 retraining runs.</div>
+              <div class="kpi-context">73% accuracy on 2012-2013 backtest. Stable across 5 retraining runs.</div>
             </article>
           </div>
           <a class="method-link" href="#methodology-section">Methodology</a>
@@ -2202,7 +2202,7 @@
             <article class="card">
               <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:12px;">How reliable is this model?</h3>
               <div style="font-size:14px;color:var(--ink);line-height:1.7;">
-                <p style="margin-bottom:12px;">On historical out-of-sample data (2022-2023), the model correctly separated firms heading toward margin compression from those that weren’t with 73% accuracy (technically: <span class="term">AUC<span class="term-tooltip">Area Under the Curve: 0.5 is random, 1.0 is perfect. Measures how well the model separates risky firms from safe ones.</span></span> 0.73). The model is stable — across five different randomized retraining runs, the score stays within ±0.6 percentage points. We chose this simpler model over a more complex alternative (XGBoost) because it’s more reproducible and the performance is statistically equivalent.</p>
+                <p style="margin-bottom:12px;">On historical out-of-sample data (2012-2013), the model correctly separated firms heading toward margin compression from those that weren’t with 73% accuracy (technically: <span class="term">AUC<span class="term-tooltip">Area Under the Curve: 0.5 is random, 1.0 is perfect. Measures how well the model separates risky firms from safe ones.</span></span> 0.73). The model is stable — across five different randomized retraining runs, the score stays within ±0.6 percentage points. We chose this simpler model over a more complex alternative (XGBoost) because it’s more reproducible and the performance is statistically equivalent.</p>
                 <p><strong>What this means in practice:</strong> trust the relative ranking of firms more than the absolute MSS number. A firm at MSS 80 is meaningfully more at risk than one at MSS 30. The exact numeric difference matters less than the rank order.</p>
               </div>
             </article>
@@ -2210,7 +2210,7 @@
             <article class="card">
               <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:12px;">What this model can’t do</h3>
               <div style="font-size:14px;color:var(--ink);line-height:1.7;">
-                <p style="margin-bottom:12px;">This model is trained on 2022-2023 data and has not seen the 2020 pandemic, the 2022 commodity spike, or current market conditions. It does not predict crashes, default risk, or stock returns — only operating margin compression, two quarters ahead. It works best when combined with qualitative judgment, not as a sole input to investment decisions.</p>
+                <p style="margin-bottom:12px;">This model is trained on 2012-2013 data and has not seen the 2020 pandemic, the 2022 commodity spike, or current market conditions. It does not predict crashes, default risk, or stock returns — only operating margin compression, two quarters ahead. It works best when combined with qualitative judgment, not as a sole input to investment decisions.</p>
                 <p>To deploy this in production, we would need to retrain on 2022-2025 quarterly data and add macroeconomic features (oil prices, INR/USD, Indian WPI inflation). That’s the natural next step.</p>
               </div>
             </article>
@@ -2257,7 +2257,7 @@
               </svg>
               <div class="methodology-flow-caption">How a firm's MSS is calculated: six engineered features plus lag/momentum inputs feed a tuned LightGBM model.</div>
             </div>
-            <p><strong>Data:</strong> CMIE Prowess quarterly financials, 30 large NSE/BSE-listed Indian firms, 2005-2024. Test set = 2022-2023.</p>
+            <p><strong>Data:</strong> CMIE Prowess quarterly financials, 30 large NSE/BSE-listed Indian firms, 2005-2024. Test set = 2012-2013.</p>
             <p><strong>Target:</strong> Binary indicator of at least 150 bps EBITDA margin compression over next 2 quarters.</p>
             <p><strong>Model:</strong> Tuned LightGBM (Optuna, 50 trials), 23 features including CPR, ICSI, IBD, WCSS, OL, SIB plus lag and momentum features.</p>
             <p><strong>Limitations:</strong> 30-firm universe, ends 2024, inventory/working-capital fields sparse (<span class="term">IBD<span class="term-tooltip">Inventory Buffer Days: how many days of raw material the firm holds in stock as protection against price spikes.</span></span> and <span class="term">WCSS<span class="term-tooltip">Working Capital Stress Score: net difference between days the firm waits to collect from customers vs. days it takes to pay suppliers.</span></span> computable for less than 30% of rows), no macro features (WPI/Brent/INR-USD).</p>
@@ -2298,11 +2298,11 @@
   "48799":  "coalindia.in",
   "62987":  "drreddys.com",
   "79498":  "gailonline.com",
-  "88297":  "hdfc.com",
+  "88297":  "hdfcbank.com",
   "92590":  "heromotocorp.com",
   "93902":  "hindalco.com",
   "94080":  "hul.co.in",
-  "95632":  "hdfcbank.com",
+  "95632":  "hdfc.com",
   "96379":  "icicibank.com",
   "97066":  "itcportal.com",
   "100632": "infosys.com",
@@ -3713,11 +3713,11 @@ if (domain) {
       clearError();
 
       const files = [
-        "predictions_pass2.json",
-        "drivers_pass2.json",
-        "metrics_pass2.json",
-        "sector_summary_pass2.json",
-        "pass1_fn_recovery_pass2.json"
+        "outputs/predictions.json",
+        "outputs/drivers.json",
+        "outputs/metrics.json",
+        "outputs/sector_summary.json",
+        "outputs/feature_list.json"
       ];
 
       const loaded = {};
@@ -3730,19 +3730,19 @@ if (domain) {
         }
       }));
 
-      if (!loaded["predictions_pass2.json"] ||
-          !loaded["drivers_pass2.json"] ||
-          !loaded["metrics_pass2.json"] ||
-          !loaded["sector_summary_pass2.json"] ||
-          !loaded["pass1_fn_recovery_pass2.json"]) {
+      if (!loaded["outputs/predictions.json"] ||
+          !loaded["outputs/drivers.json"] ||
+          !loaded["outputs/metrics.json"] ||
+          !loaded["outputs/sector_summary.json"] ||
+          !loaded["outputs/feature_list.json"]) {
         return;
       }
 
-      state.predictions = loaded["predictions_pass2.json"];
-      state.drivers = loaded["drivers_pass2.json"];
-      state.metrics = loaded["metrics_pass2.json"];
-      state.sectorSummary = loaded["sector_summary_pass2.json"];
-      state.pass1Recovery = loaded["pass1_fn_recovery_pass2.json"];
+      state.predictions = loaded["outputs/predictions.json"];
+      state.drivers = loaded["outputs/drivers.json"];
+      state.metrics = loaded["outputs/metrics.json"];
+      state.sectorSummary = loaded["outputs/sector_summary.json"];
+      state.pass1Recovery = loaded["outputs/feature_list.json"];
 
       parseData();
       renderFirmSelect();
