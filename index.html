@@ -1,3829 +1,1553 @@
-<!-- To run: open a terminal in this folder and run `python -m http.server 8000`,
-     then visit http://localhost:8000. Opening index.html directly via file:// will
-     fail fetch() due to browser CORS policy. -->
+<!-- Inflation Shield — Scroll-Animated Storytelling Dashboard
+     To run: python -m http.server 8000 → http://localhost:8000
+     Opening via file:// will fail (CORS blocks fetch). -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inflation Shield - Margin Squeeze Predictor</title>
+  <title>Inflation Shield — Margin Squeeze Predictor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
+    /* ═══════════════════════════════════════════════════════
+       DESIGN TOKENS
+       ═══════════════════════════════════════════════════════ */
     :root {
-      --navy: #0f2d52;
-      --blue: #1d6fce;
-      --light-blue: #e8f1fb;
-      --teal: #0d8a6a;
-      --amber: #c47b14;
-      --red: #c0392b;
-      --ink: #1a1f2e;
-      --muted: #667085;
-      --bg: #f6f9fc;
-      --card-bg: #ffffff;
-      --border: #dbe5f2;
-      --radius: 10px;
-      --shadow-sm: 0 2px 10px rgba(15, 45, 82, 0.05);
-      --shadow-md: 0 8px 24px rgba(15, 45, 82, 0.11);
-      --topbar-h: 56px;
-      --sidebar-w: 240px;
-      --sidebar-w-collapsed: 64px;
-      --card-pad: 24px;
-      --section-gap: 52px;
-      --trans: 200ms ease;
-      --max-content-w: 1200px;
+      --bg-deep: #080e1a;
+      --bg-navy: #0a1628;
+      --bg-card: rgba(15, 30, 60, 0.6);
+      --bg-card-hover: rgba(20, 40, 80, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --teal: #0fd99c;
+      --teal-dim: #0a9b6e;
+      --teal-glow: rgba(15, 217, 156, 0.15);
+      --amber: #f0a830;
+      --amber-dim: #c47b14;
+      --red: #ef4444;
+      --red-dim: #b91c1c;
+      --text: #e8edf5;
+      --text-muted: #8899b0;
+      --text-dim: #4a5a70;
+      --accent-gradient: linear-gradient(135deg, #0fd99c, #1d9bf0);
+      --serif: 'Instrument Serif', Georgia, serif;
+      --sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --section-pad: clamp(60px, 10vh, 120px);
+      --content-max: 1100px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html,
+    /* ═══════════════════════════════════════════════════════
+       RESET & BASE
+       ═══════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
     body {
-      height: 100%;
-      scroll-behavior: smooth;
+      font-family: var(--sans);
+      background: var(--bg-deep);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
     }
+    ::selection { background: var(--teal); color: var(--bg-deep); }
 
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: "Plus Jakarta Sans", sans-serif;
-      line-height: 1.5;
-      text-rendering: geometricPrecision;
-    }
+    /* ═══════════════════════════════════════════════════════
+       UTILITIES
+       ═══════════════════════════════════════════════════════ */
+    .container { max-width: var(--content-max); margin: 0 auto; padding: 0 clamp(20px, 5vw, 40px); }
+    .section { padding: var(--section-pad) 0; position: relative; }
+    .section + .section { border-top: 1px solid var(--glass-border); }
 
-    body.modal-open,
-    body.drawer-open {
-      overflow: hidden;
-    }
-
-    body.sidebar-collapsed .sidebar {
-      width: var(--sidebar-w-collapsed);
-    }
-
-    body.sidebar-collapsed .sidebar-brand-text,
-    body.sidebar-collapsed .nav-label,
-    body.sidebar-collapsed .sidebar-footer {
-      opacity: 0;
-      visibility: hidden;
-      width: 0;
-      overflow: hidden;
-    }
-
-    body.sidebar-collapsed .main-pane {
-      margin-left: var(--sidebar-w-collapsed);
-      width: calc(100% - var(--sidebar-w-collapsed));
-    }
-
-    .error-banner {
-      position: fixed;
-      top: 10px;
-      right: 12px;
-      z-index: 120;
-      display: none;
-      max-width: 520px;
-      border: 1px solid rgba(192, 57, 43, 0.4);
-      background: rgba(192, 57, 43, 0.1);
-      color: var(--red);
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 13px;
+    .eyebrow {
+      font-size: 0.8rem;
       font-weight: 600;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .app-shell {
-      min-height: 100vh;
-      background: var(--bg);
-    }
-
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: var(--sidebar-w);
-      background: #ffffff;
-      border-right: 1px solid var(--border);
-      z-index: 30;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 12px;
       display: flex;
-      flex-direction: column;
-      transition: width var(--trans), transform var(--trans);
-    }
-
-    .sidebar-header {
-      height: var(--topbar-h);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 14px;
-      gap: 8px;
-      background: #ffffff;
-    }
-
-    .sidebar-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .sidebar-logo {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      background: var(--light-blue);
-      color: var(--blue);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 600;
-      flex: 0 0 auto;
-    }
-
-    .sidebar-brand-text {
-      color: var(--navy);
-      font-weight: 600;
-      font-size: 14px;
-      transition: opacity var(--trans), visibility var(--trans);
-      white-space: nowrap;
-    }
-
-    .sidebar-toggle-btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--muted);
-      border-radius: 8px;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      transition: color var(--trans), border-color var(--trans), background var(--trans);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex: 0 0 auto;
-    }
-
-    .sidebar-toggle-btn:hover {
-      color: var(--navy);
-      border-color: #c8d6eb;
-      background: #f8fbff;
-    }
-
-    .sidebar-nav {
-      padding: 14px 10px;
-      display: grid;
-      gap: 4px;
-    }
-
-    .nav-item {
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--muted);
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      height: 40px;
-      padding: 0 10px;
-      cursor: pointer;
-      font-size: 14px;
-      text-align: left;
-      transition: background var(--trans), color var(--trans), border-color var(--trans);
-    }
-
-    .nav-item:hover {
-      background: #f5f9ff;
-      border-color: #d3e1f5;
-      color: var(--navy);
-    }
-
-    .nav-item.active {
-      background: var(--light-blue);
-      border-color: #c9dbf5;
-      color: var(--navy);
-      font-weight: 600;
-    }
-
-    .nav-icon {
-      width: 18px;
-      text-align: center;
-      font-size: 14px;
-      line-height: 1;
-      flex: 0 0 auto;
-    }
-
-    .nav-label {
-      transition: opacity var(--trans), visibility var(--trans);
-      white-space: nowrap;
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      border-top: 1px solid var(--border);
-      padding: 10px 12px 14px;
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.45;
-      transition: opacity var(--trans), visibility var(--trans);
-    }
-
-    .main-pane {
-      margin-left: var(--sidebar-w);
-      width: calc(100% - var(--sidebar-w));
-      min-height: 100vh;
-      transition: margin-left var(--trans), width var(--trans);
-    }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      height: var(--topbar-h);
-      border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(3px);
-    }
-
-    .topbar-inner {
-      max-width: var(--max-content-w);
-      margin: 0 auto;
-      height: 100%;
-      padding: 0 24px;
-      display: grid;
-      grid-template-columns: 1fr 1.2fr 1fr;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .topbar-left {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .mobile-menu-btn {
-      display: none;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--muted);
-      border-radius: 8px;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      font-size: 15px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .breadcrumb {
-      color: var(--navy);
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .topbar-search {
-      min-width: 0;
-      position: relative;
-    }
-
-    .topbar-search input {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 9px;
-      height: 36px;
-      padding: 0 34px 0 12px;
-      font-family: inherit;
-      font-size: 13px;
-      color: var(--ink);
-      transition: border-color var(--trans), box-shadow var(--trans);
-    }
-
-    .topbar-search input:focus {
-      outline: none;
-      border-color: #b9d1ee;
-      box-shadow: 0 0 0 3px rgba(29, 111, 206, 0.12);
-    }
-
-    .search-kbd {
-      position: absolute;
-      right: 8px;
-      top: 8px;
-      font-size: 11px;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      background: #f8fbff;
-      border-radius: 6px;
-      padding: 1px 6px;
-      pointer-events: none;
-    }
-
-    .topbar-right {
-      display: flex;
-      justify-content: flex-end;
       align-items: center;
       gap: 8px;
-      min-width: 0;
+    }
+    .eyebrow::before {
+      content: '';
+      width: 24px;
+      height: 2px;
+      background: var(--teal);
+      border-radius: 2px;
     }
 
-    .chip {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--muted);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 11px;
-      white-space: nowrap;
-    }
-
-    .chip.scope {
-      background: var(--light-blue);
-      border-color: #c9dcf6;
-      color: var(--navy);
-    }
-
-    .topbar-icon-btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--muted);
-      border-radius: 999px;
-      width: 28px;
-      height: 28px;
-      cursor: pointer;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color var(--trans), color var(--trans), background var(--trans);
-    }
-
-    .topbar-icon-btn:hover {
-      border-color: #c9dcf6;
-      color: var(--navy);
-      background: #f8fbff;
-    }
-
-    .content-wrap {
-      max-width: var(--max-content-w);
-      margin: 0 auto;
-      padding: 32px 24px 60px;
-    }
-
-    .section {
-      margin-top: var(--section-gap);
-      scroll-margin-top: 78px;
-    }
-
-    .section:first-child {
-      margin-top: 0;
-    }
-
-    .section-title {
-      font-family: "Instrument Serif", serif;
-      font-size: 32px;
+    h2.section-title {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 400;
       line-height: 1.2;
-      letter-spacing: -0.02em;
-      color: var(--navy);
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    h2.section-title em {
+      font-style: italic;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .section-subtitle {
-      color: #5a6a7e;
-      font-size: 16px;
-      line-height: 1.5;
-      margin-bottom: 18px;
-    }
-
-    .hero-block h1 {
-      font-family: "Instrument Serif", serif;
-      font-size: clamp(2rem, 5.1vw, 3rem);
-      line-height: 1.12;
-      color: var(--navy);
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-      max-width: 14ch;
-    }
-
-    .hero-subtitle {
-      color: var(--muted);
-      font-size: 15px;
-      margin-bottom: 22px;
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 680px;
+      margin-bottom: 40px;
     }
 
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
-      padding: var(--card-pad);
-      box-shadow: var(--shadow-sm);
-      transition: transform 180ms ease, box-shadow 180ms ease, border-color var(--trans);
+      padding: clamp(20px, 3vw, 32px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
     }
-
     .card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-      border-color: #c6d8ef;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 10px;
-    }
-
-    .kpi-card {
-      position: relative;
-      min-height: 144px;
-      overflow: hidden;
-    }
-
-    .kpi-label {
-      font-size: 11px;
-      line-height: 1.3;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: var(--muted);
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-
-    .kpi-value {
-      font-family: "Instrument Serif", serif;
-      font-size: 44px;
-      font-style: italic;
-      line-height: 1;
-      color: var(--navy);
-      margin-bottom: 9px;
-      font-feature-settings: "tnum";
-    }
-
-    .kpi-context {
-      font-size: 12px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .delta-up {
-      color: var(--teal);
-      font-weight: 600;
-    }
-
-    .delta-down {
-      color: var(--red);
-      font-weight: 600;
-    }
-
-    .mini-spark {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 50px;
-      height: 22px;
-    }
-
-    .method-link {
-      font-size: 13px;
-      color: var(--blue);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .method-link:hover {
-      text-decoration: underline;
-    }
-
-    .toolbar-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .filters {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .filter-chip {
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: #fff;
-      color: var(--muted);
-      font-size: 12px;
-      padding: 6px 11px;
-      cursor: pointer;
-      transition: border-color var(--trans), background var(--trans), color var(--trans);
-    }
-
-    .filter-chip.active {
-      background: var(--light-blue);
-      color: var(--navy);
-      border-color: #bed4f2;
-      font-weight: 600;
-    }
-
-    .leaderboard-wrap {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .leaderboard-scroll {
-      overflow: auto;
-      max-height: 500px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      font-feature-settings: "tnum";
-    }
-
-    th,
-    td {
-      padding: 11px 12px;
-      border-bottom: 1px solid #edf2fa;
-      vertical-align: middle;
-    }
-
-    thead th {
-      background: #f8fbff;
-      color: var(--muted);
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 600;
-      user-select: none;
-      line-height: 1.3;
-      white-space: nowrap;
-    }
-
-    th.sortable {
-      cursor: pointer;
-    }
-
-    tbody tr {
-      transition: background var(--trans), box-shadow 180ms ease, transform 180ms ease;
-    }
-
-    tbody tr:hover {
-      background: #fbfdff;
-      box-shadow: 0 2px 8px rgba(15,45,82,0.08);
+      border-color: rgba(15, 217, 156, 0.2);
+      box-shadow: 0 0 40px var(--teal-glow);
       transform: translateY(-2px);
     }
 
-    .num {
-      text-align: right;
-      white-space: nowrap;
-      font-feature-settings: "tnum";
+    .chip {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
     }
+    .chip-green { background: rgba(15, 217, 156, 0.15); color: var(--teal); }
+    .chip-amber { background: rgba(240, 168, 48, 0.15); color: var(--amber); }
+    .chip-red   { background: rgba(239, 68, 68, 0.15); color: var(--red); }
 
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-    }
-
-    .rank-badge {
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
+    /* ═══════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════ */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
       justify-content: center;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .rank-high {
-      background: var(--red);
-    }
-
-    .rank-mid {
-      background: var(--amber);
-    }
-
-    .rank-low {
-      background: var(--teal);
-    }
-
-    .firm-cell {
-      display: flex;
       align-items: center;
-      gap: 8px;
-      min-width: 230px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      padding: 40px 20px;
+    }
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, rgba(13, 138, 106, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 20%, rgba(29, 155, 240, 0.08) 0%, transparent 60%);
+      pointer-events: none;
     }
 
-    .firm-name {
-      color: var(--ink);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .ghost-btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--blue);
-      border-radius: 7px;
-      font-size: 12px;
-      padding: 5px 10px;
-      cursor: pointer;
-      transition: border-color var(--trans), background var(--trans), color var(--trans);
-    }
-
-    .ghost-btn:hover {
-      border-color: #c2d8f8;
-      background: #f8fbff;
-      color: var(--navy);
-    }
-
-    .sparkline {
-      width: 46px;
-      height: 20px;
+    .hero-shield {
+      font-size: clamp(3rem, 8vw, 5rem);
+      margin-bottom: 16px;
       display: inline-block;
     }
 
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-size: 11px;
-      font-weight: 600;
-      border: 1px solid transparent;
-      white-space: nowrap;
-      line-height: 1.2;
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 400;
+      line-height: 1.05;
+      margin-bottom: 20px;
+      color: #fff;
     }
-
-    .pill-risk-high {
-      background: rgba(192, 57, 43, 0.12);
-      color: #9e281d;
-      border-color: rgba(192, 57, 43, 0.25);
-    }
-
-    .pill-risk-moderate {
-      background: rgba(196, 123, 20, 0.13);
-      color: #8b5a12;
-      border-color: rgba(196, 123, 20, 0.26);
-    }
-
-    .pill-risk-low {
-      background: rgba(13, 138, 106, 0.12);
-      color: #0a7057;
-      border-color: rgba(13, 138, 106, 0.25);
-    }
-
-    .pill-confidence-medium {
-      background: rgba(29, 111, 206, 0.1);
-      color: #1e5fa9;
-      border-color: rgba(29, 111, 206, 0.25);
-    }
-
-    .pill-confidence-low {
-      background: #f1f4f8;
-      color: #5e6676;
-      border-color: #dde3eb;
-    }
-
-    .pill-basis {
-      background: #f8fbff;
-      color: var(--navy);
-      border-color: #d3e1f6;
-      gap: 5px;
-    }
-
-    .pill-basis .basis-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: var(--blue);
-    }
-
-    .pill-outcome-ok {
-      background: rgba(13, 138, 106, 0.11);
-      color: #0a7057;
-      border-color: rgba(13, 138, 106, 0.2);
-    }
-
-    .pill-outcome-missed {
-      background: rgba(192, 57, 43, 0.11);
-      color: #9e281d;
-      border-color: rgba(192, 57, 43, 0.2);
-    }
-
-    .delta {
-      white-space: nowrap;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .delta.risk-up {
-      color: var(--red);
-    }
-
-    .delta.risk-down {
-      color: var(--teal);
-    }
-
-    .empty-state {
-      text-align: center;
-      color: var(--muted);
-      padding: 28px 14px;
-      font-size: 13px;
-    }
-
-    .empty-icon {
-      width: 38px;
-      height: 38px;
-      margin: 0 auto 10px;
-      opacity: 0.7;
-    }
-
-    .explorer-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .explorer-select-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .explorer-select-wrap label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    select {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #fff;
-      color: var(--ink);
-      padding: 8px 11px;
-      font-size: 13px;
-      min-width: 260px;
-      font-family: inherit;
-      transition: border-color var(--trans), box-shadow var(--trans);
-    }
-
-    select:focus {
-      outline: none;
-      border-color: #b9d1ee;
-      box-shadow: 0 0 0 3px rgba(29, 111, 206, 0.12);
-    }
-
-    .explorer-layout {
-      display: grid;
-      grid-template-columns: 40% 60%;
-      gap: 14px;
-      align-items: stretch;
-    }
-
-    .explorer-left,
-    .explorer-right {
-      min-height: 100%;
-    }
-
-    .identity-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .identity-meta {
-      min-width: 0;
-    }
-
-    .identity-name {
-      font-family: "Instrument Serif", serif;
-      font-size: 31px;
-      line-height: 1.2;
-      color: var(--navy);
-      margin-bottom: 2px;
-      letter-spacing: -0.01em;
-    }
-
-    .identity-sub {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 5px;
-    }
-
-    .identity-code {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .identity-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 999px;
-      background: var(--light-blue);
-      color: var(--blue);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      font-family: "Instrument Serif", serif;
+    .hero-title em {
       font-style: italic;
-      flex: 0 0 auto;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-.identity-avatar img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 4px;
-}
 
-    .gauge-wrap {
+    .hero-sub {
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-weight: 300;
+    }
+
+    .hero-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 60px;
+    }
+    .hero-chips .chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--glass-border);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      padding: 5px 14px;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-
-    .gauge-score {
-      font-size: 40px;
-      line-height: 1;
-      color: var(--navy);
-      font-feature-settings: "tnum";
-      margin-top: -6px;
-      font-family: "Plus Jakarta Sans", sans-serif;
-      font-weight: 500;
-    }
-
-    .gauge-quarter {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .recommend-card {
-      border: 1px solid #dbe8fa;
-      background: #f8fbff;
-      border-radius: 9px;
-      padding: 12px;
-      margin: 12px 0;
-      font-size: 13px;
-      color: #334155;
-    }
-
-    .similar-firms {
-      font-size: 12px;
-      color: var(--muted);
-      margin: 8px 0 12px;
-      min-height: 18px;
-    }
-
-    .similar-firms button {
-      border: 0;
-      background: transparent;
-      color: var(--blue);
-      cursor: pointer;
-      font-size: 12px;
-      margin-right: 8px;
-      text-decoration: underline;
-      padding: 0;
-    }
-
-    .facts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9px;
-      margin-top: 10px;
-    }
-
-    .fact {
-      border-top: 1px solid #e9eff9;
-      padding-top: 8px;
-    }
-
-    .fact-label {
-      font-size: 11px;
-      color: var(--muted);
+      gap: 8px;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 4px;
+    }
+    .scroll-hint .arrow {
+      width: 24px;
+      height: 24px;
+      border-right: 2px solid var(--text-dim);
+      border-bottom: 2px solid var(--text-dim);
+      transform: rotate(45deg);
+      animation: bounce-arrow 2s infinite;
+    }
+    @keyframes bounce-arrow {
+      0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.4; }
+      50% { transform: rotate(45deg) translate(4px, 4px); opacity: 1; }
     }
 
-    .fact-value {
-      font-size: 13px;
-      color: var(--ink);
+    /* ═══════════════════════════════════════════════════════
+       FLOATING PARTICLES (HERO BG)
+       ═══════════════════════════════════════════════════════ */
+    #particles-canvas {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    #hero > *:not(#particles-canvas) { position: relative; z-index: 1; }
+
+    /* ═══════════════════════════════════════════════════════
+       PROBLEM SECTION — "DO YOU KNOW?"
+       ═══════════════════════════════════════════════════════ */
+    .dyk-question {
+      font-family: var(--serif);
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.3;
+      color: #fff;
+      margin-bottom: 40px;
+      max-width: 760px;
+    }
+    .dyk-question .emoji { font-style: normal; margin-right: 8px; }
+
+    .squeeze-visual {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .squeeze-bar {
+      text-align: center;
+    }
+    .squeeze-bar .bar-track {
+      width: 100%;
+      height: 180px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: var(--radius-sm);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-end;
+    }
+    .squeeze-bar .bar-fill {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      transition: height 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .squeeze-bar .bar-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
       font-weight: 500;
     }
+    .squeeze-bar .bar-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
 
-    .tabs {
+    .callout-box {
+      background: rgba(15, 217, 156, 0.06);
+      border-left: 3px solid var(--teal);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 20px 24px;
+      margin: 32px 0;
+      font-size: 1.05rem;
+    }
+    .callout-box strong { color: #fff; }
+
+    .stat-big {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .stat-big .number {
+      font-family: var(--serif);
+      font-size: clamp(3rem, 7vw, 5rem);
+      font-weight: 400;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .stat-big .label {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 300px;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       QUESTION SECTION — "WHAT IF?"
+       ═══════════════════════════════════════════════════════ */
+    .gauge-container {
+      display: flex;
+      justify-content: center;
+      margin: 40px 0;
+    }
+    .gauge-svg { max-width: 320px; width: 100%; }
+    .gauge-label {
+      text-align: center;
+      margin-top: -10px;
+    }
+    .gauge-label .score { font-family: var(--serif); font-size: 3rem; color: #fff; }
+    .gauge-label .desc { font-size: 0.9rem; color: var(--text-muted); }
+
+    .score-legend {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .score-legend-item {
       display: flex;
       align-items: center;
       gap: 8px;
-      border-bottom: 1px solid #e8eef8;
-      padding-bottom: 9px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .score-legend-item .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
     }
 
-    .tab-btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--muted);
-      border-radius: 8px;
-      height: 31px;
-      padding: 0 11px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: border-color var(--trans), background var(--trans), color var(--trans);
+    /* ═══════════════════════════════════════════════════════
+       FEATURES SECTION — "THE 6 INSTRUMENTS"
+       ═══════════════════════════════════════════════════════ */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
     }
-
-    .tab-btn.active {
-      background: var(--light-blue);
-      color: var(--navy);
-      border-color: #c4d8f3;
-      font-weight: 600;
+    .feature-card {
+      padding: clamp(24px, 3vw, 32px);
     }
-
-    .tab-pane {
-      display: none;
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity var(--trans), transform var(--trans);
+    .feature-card .feat-emoji {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: inline-block;
     }
-
-    .tab-pane.active {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
+    .feature-card .feat-code {
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 6px;
     }
-
-    .segment-row {
-      display: flex;
-      justify-content: flex-end;
+    .feature-card .feat-name {
+      font-family: var(--serif);
+      font-size: 1.3rem;
+      color: #fff;
       margin-bottom: 8px;
     }
+    .feature-card .feat-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
 
-    .segmented {
-      display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    /* ═══════════════════════════════════════════════════════
+       SCOREBOARD SECTION
+       ═══════════════════════════════════════════════════════ */
+    .leaderboard {
+      margin-top: 32px;
+    }
+    .lb-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto 180px;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      border: 1px solid transparent;
+    }
+    .lb-row:hover {
+      background: var(--bg-card);
+      border-color: var(--glass-border);
+      transform: translateX(4px);
+    }
+    .lb-row .rank {
+      font-family: var(--serif);
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .lb-row .firm-info .firm-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #fff;
+    }
+    .lb-row .firm-info .firm-sector {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .lb-row .mss-value {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 400;
+      text-align: right;
+    }
+    .lb-row .mss-bar-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
       overflow: hidden;
     }
-
-    .segment-btn {
-      border: 0;
-      background: #fff;
-      color: var(--muted);
-      padding: 7px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background var(--trans), color var(--trans);
+    .lb-row .mss-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+      width: 0;
     }
 
-    .segment-btn.active {
-      background: var(--light-blue);
-      color: var(--navy);
-      font-weight: 600;
+    /* Expanded firm detail */
+    .lb-expand {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1), padding 0.3s;
+      padding: 0 20px;
     }
-
-    .chart-wrap {
-      min-height: 305px;
-      padding: 8px;
-      border: 1px solid #e6edf8;
-      border-radius: 9px;
-      background: #fff;
+    .lb-expand.open {
+      max-height: 500px;
+      padding: 16px 20px 24px;
     }
-
-    .chart-wrap.canvas-small {
-      min-height: 265px;
-    }
-
-    .chart-wrap canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    .driver-note {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .driver-quarter-select {
-      margin-bottom: 8px;
-      display: none;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .driver-quarter-select label {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .driver-quarter-select select {
-      min-width: 210px;
-      padding: 6px 10px;
-      font-size: 12px;
-    }
-
-    .details-table-wrap {
-      border: 1px solid #e6edf8;
-      border-radius: 9px;
-      overflow: auto;
-      max-height: 350px;
-    }
-
-    .details-table th {
-      top: 0;
-    }
-
-    .details-table td,
-    .details-table th {
-      padding: 8px 10px;
-      font-size: 12px;
-    }
-
-    .details-table td:nth-child(2),
-    .details-table td:nth-child(3) {
-      text-align: right;
-      white-space: nowrap;
-      font-feature-settings: "tnum";
-    }
-
-    .details-muted {
-      color: var(--muted);
-      font-size: 12px;
-      padding: 14px;
-      text-align: center;
-    }
-
-    .sector-layout {
+    .lb-expand-inner {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 14px;
-      align-items: stretch;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding-top: 12px;
+      border-top: 1px solid var(--glass-border);
     }
-
-    .sector-chart-wrap {
-      min-height: 520px;
-      padding: 8px;
-      border: 1px solid #e6edf8;
-      border-radius: 9px;
-      background: #fff;
-    }
-
-    .sector-chart-wrap canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    .sector-summary-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .sector-summary-panel .summary-stat {
-      border-top: 1px solid #e9eff9;
-      padding-top: 10px;
-    }
-
-    .sector-summary-panel .summary-stat-label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
-
-    .sector-summary-panel .summary-stat-value {
-      font-family: "Instrument Serif", serif;
-      font-size: 28px;
-      font-style: italic;
-      color: var(--navy);
-      line-height: 1.15;
-    }
-
-    .sector-top-list {
+    .driver-list {
       list-style: none;
-      display: grid;
-      gap: 6px;
-      margin-top: 6px;
     }
-
-    .sector-top-list li {
-      font-size: 12px;
+    .driver-list li {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 6px 0;
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 8px;
-      padding: 6px 0;
-      border-bottom: 1px dashed #edf3fb;
-      color: var(--ink);
     }
-
-    .sector-top-list li .rank-num {
-      font-weight: 600;
-      color: var(--muted);
-      min-width: 18px;
-    }
-
-    /* Glossary tooltip styles */
-    .term {
-      border-bottom: 1px dotted #999;
-      cursor: help;
+    .driver-list li .driver-arrow { font-size: 1rem; }
+    .driver-list li strong { color: #fff; }
+    .sparkline-container {
+      height: 100px;
       position: relative;
     }
 
-    .term-tooltip {
-      position: absolute;
-      bottom: calc(100% + 8px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1a1f2e;
-      color: #f0f2f6;
-      font-size: 12px;
-      font-weight: 400;
-      line-height: 1.5;
-      padding: 10px 14px;
-      border-radius: 8px;
-      max-width: 300px;
-      width: max-content;
-      z-index: 100;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 200ms ease;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+    @media (max-width: 700px) {
+      .lb-row { grid-template-columns: 28px 1fr auto; gap: 10px; padding: 12px 14px; }
+      .lb-row .mss-bar-track { display: none; }
+      .lb-expand-inner { grid-template-columns: 1fr; }
     }
 
-    .term-tooltip::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 6px solid transparent;
-      border-top-color: #1a1f2e;
+    /* ═══════════════════════════════════════════════════════
+       SECTOR VIEW
+       ═══════════════════════════════════════════════════════ */
+    .sector-bars {
+      margin-top: 32px;
     }
-
-    .term:hover .term-tooltip,
-    .term.tooltip-active .term-tooltip {
-      opacity: 1;
-    }
-
-    /* FAQ accordion styles */
-    .faq-section {
-      margin-top: var(--section-gap);
-      scroll-margin-top: 78px;
-    }
-
-    .faq-accordion {
+    .sector-bar-row {
       display: grid;
-      gap: 0;
-    }
-
-    .faq-item {
-      border-bottom: 1px solid var(--border);
-    }
-
-    .faq-item:last-child {
-      border-bottom: none;
-    }
-
-    .faq-question {
-      width: 100%;
-      border: none;
-      background: transparent;
-      text-align: left;
-      padding: 16px 18px;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--navy);
-      cursor: pointer;
-      display: flex;
+      grid-template-columns: 220px 1fr 60px;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      transition: background var(--trans);
+      gap: 16px;
+      padding: 8px 0;
     }
-
-    .faq-question:hover {
-      background: #f8fbff;
-    }
-
-    .faq-chevron {
-      flex-shrink: 0;
-      width: 18px;
-      height: 18px;
-      color: var(--muted);
-      transition: transform 250ms ease;
-    }
-
-    .faq-item.open .faq-chevron {
-      transform: rotate(180deg);
-    }
-
-    .faq-answer {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 300ms ease, padding 300ms ease;
-    }
-
-    .faq-item.open .faq-answer {
-      max-height: 400px;
-    }
-
-    .faq-answer-inner {
-      padding: 0 18px 18px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    /* Insight banner styles */
-    .insight-banner {
-      background: #f0f7ff;
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--navy);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      margin-top: 18px;
-      margin-bottom: 0;
-    }
-
-    .insight-banner-title {
-      font-family: "Instrument Serif", serif;
-      font-size: 18px;
-      color: var(--navy);
-      margin-bottom: 12px;
-    }
-
-    .insight-line {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 14px;
-      color: var(--ink);
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-
-    .insight-line:last-child {
-      margin-bottom: 0;
-    }
-
-    .insight-line svg {
-      flex-shrink: 0;
-      width: 16px;
-      height: 16px;
-      margin-top: 3px;
-      color: var(--navy);
-    }
-
-    /* Heat map styles */
-    .heatmap-wrap {
-      display: none;
-      overflow-x: auto;
-    }
-
-    .heatmap-wrap.active {
-      display: block;
-    }
-
-    .heatmap-grid {
-      display: grid;
-      gap: 2px;
-      min-width: 600px;
-    }
-
-    .heatmap-header-cell {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 600;
-      text-align: center;
-      padding: 6px 4px;
-      letter-spacing: 0.04em;
-    }
-
-    .heatmap-label-cell {
-      font-size: 11px;
-      color: var(--ink);
-      padding: 6px 8px 6px 0;
+    .sector-bar-row .sector-name {
+      font-size: 0.85rem;
+      color: var(--text-muted);
       text-align: right;
-      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .heatmap-cell {
-      width: 100%;
-      min-width: 54px;
-      height: 36px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 600;
-      color: #fff;
-      cursor: default;
-      position: relative;
-      transition: transform 120ms ease;
-    }
-
-    .heatmap-cell:hover {
-      transform: scale(1.08);
-      z-index: 2;
-    }
-
-    .heatmap-cell.no-data {
-      background: repeating-linear-gradient(45deg, #e8eef5, #e8eef5 4px, #f5f8fc 4px, #f5f8fc 8px);
-      color: transparent;
-    }
-
-    .heatmap-caption {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* Driver explanation card */
-    .driver-explanation {
-      border: 1px solid #dbe8fa;
-      background: #f8fbff;
-      border-radius: 9px;
-      padding: 12px;
-      margin: 8px 0 12px;
-      font-size: 13px;
-      color: #334155;
-      line-height: 1.6;
-    }
-
-    .driver-explanation-title {
-      font-weight: 600;
-      color: var(--navy);
-      margin-bottom: 4px;
-      font-size: 12px;
-    }
-
-    /* Methodology flow diagram */
-    .methodology-flow {
-      margin: 20px 0;
-      text-align: center;
-    }
-
-    .methodology-flow svg {
-      max-width: 100%;
-      height: auto;
-    }
-
-    .methodology-flow-caption {
-      margin-top: 8px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    /* Keyboard shortcuts expandable in methodology */
-    .shortcuts-expand {
-      margin-top: 16px;
-      border-top: 1px solid #e9eff9;
-      padding-top: 12px;
-    }
-
-    .shortcuts-toggle {
-      border: none;
-      background: transparent;
-      color: var(--blue);
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 0;
-    }
-
-    .shortcuts-toggle:hover {
-      text-decoration: underline;
-    }
-
-    .shortcuts-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 300ms ease;
-    }
-
-    .shortcuts-content.open {
-      max-height: 300px;
-    }
-
-    /* Nav icon SVG */
-    .nav-icon {
-      width: 18px;
-      height: 18px;
-      text-align: center;
-      font-size: 14px;
-      line-height: 1;
-      flex: 0 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .nav-icon svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .faq-footer {
-      margin-top: 12px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .toggle-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 10px;
-    }
-
-    .toggle {
-      display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .toggle button {
-      border: 0;
-      background: #fff;
-      color: var(--muted);
-      font-size: 12px;
-      padding: 7px 10px;
-      cursor: pointer;
-    }
-
-    .toggle button.active {
-      color: var(--navy);
-      background: var(--light-blue);
-      font-weight: 600;
-    }
-
-    .toggle button[disabled] {
-      color: #b0b8c9;
-      cursor: not-allowed;
-      background: #f0f3f7;
-      opacity: 0.6;
-    }
-
-    .caption-card {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.6;
-      height: 100%;
-      display: flex;
-      align-items: center;
-    }
-
-    .disclaimer {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .model-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-
-    .model-list {
-      list-style: none;
-      border-top: 1px solid #e9eff9;
-      margin-top: 10px;
-      padding-top: 10px;
-      max-height: 182px;
-      overflow: auto;
-      display: grid;
-      gap: 8px;
-    }
-
-    .model-list li {
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--ink);
-      align-items: center;
-      padding-bottom: 7px;
-      border-bottom: 1px dashed #edf3fb;
-    }
-
-    .qa-grid {
-      margin-top: 14px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .qa-item {
-      border: 1px solid #e3ecf9;
-      border-radius: 9px;
-      padding: 12px;
-      background: #fbfdff;
-    }
-
-    .qa-q {
-      font-size: 12px;
-      color: var(--navy);
-      font-weight: 600;
-      margin-bottom: 7px;
-    }
-
-    .qa-a {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-
-    .about-block p {
-      margin-bottom: 10px;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .about-block strong {
-      color: var(--ink);
-    }
-
-    .footer-line {
-      margin-top: 10px;
-      color: var(--navy);
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .reveal {
-      opacity: 1;
-      transform: none;
-    }
-
-    body.motion-enabled .reveal {
-      opacity: 0;
-      transform: translateY(12px) scale(0.99);
-      transition: opacity 360ms ease, transform 360ms ease;
-    }
-
-    body.motion-enabled .reveal.is-visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    .crossfade {
-      transition: opacity var(--trans);
-    }
-
-    .crossfade.fading {
-      opacity: 0;
-    }
-
-    .modal {
-      position: fixed;
-      inset: 0;
-      z-index: 80;
-      display: none;
-      background: rgba(15, 31, 56, 0.45);
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .modal.open {
-      display: flex;
-    }
-
-    .modal-card {
-      width: min(460px, 100%);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: var(--shadow-md);
-      padding: 18px;
-    }
-
-    .modal-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .modal-title {
-      font-family: "Instrument Serif", serif;
-      font-size: 24px;
-      color: var(--navy);
-    }
-
-    .modal-close {
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 8px;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      color: var(--muted);
-    }
-
-    .shortcut-list {
-      list-style: none;
-      display: grid;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .shortcut-list b {
-      color: var(--navy);
-      font-weight: 600;
-      min-width: 30px;
-      display: inline-block;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-    }
-
-    .mobile-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(16, 30, 49, 0.2);
-      z-index: 25;
-      display: none;
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
       white-space: nowrap;
-      border: 0;
+    }
+    .sector-bar-row .bar-track {
+      height: 24px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .sector-bar-row .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--bg-deep);
+      width: 0;
+    }
+    .sector-bar-row .bar-value {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      text-align: right;
+    }
+    .sector-callouts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .sector-callout {
+      padding: 20px;
+      font-size: 0.9rem;
+    }
+    .sector-callout .sc-title { color: #fff; font-weight: 600; margin-bottom: 6px; }
+    .sector-callout .sc-desc { color: var(--text-muted); }
+
+    @media (max-width: 700px) {
+      .sector-bar-row { grid-template-columns: 1fr 60px; }
+      .sector-bar-row .sector-name { text-align: left; grid-column: 1 / -1; margin-bottom: -4px; }
     }
 
-    @media (max-width: 1180px) {
-      .kpi-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .model-grid {
-        grid-template-columns: 1fr;
-      }
+    /* ═══════════════════════════════════════════════════════
+       MODEL CARD — "HOW GOOD IS IT?"
+       ═══════════════════════════════════════════════════════ */
+    .model-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 32px 0;
+    }
+    .model-stat-card {
+      text-align: center;
+      padding: 28px 20px;
+    }
+    .model-stat-card .ms-value {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .model-stat-card .ms-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
     }
 
-    @media (max-width: 1024px) {
-      .sidebar {
-        transform: translateX(-100%);
-      }
-
-      body.drawer-open .sidebar {
-        transform: translateX(0);
-      }
-
-      body.drawer-open .mobile-overlay {
-        display: block;
-      }
-
-      .main-pane,
-      body.sidebar-collapsed .main-pane {
-        margin-left: 0;
-        width: 100%;
-      }
-
-      .mobile-menu-btn {
-        display: inline-flex;
-      }
-
-      .sidebar-toggle-btn {
-        display: none;
-      }
-
-      .topbar-inner {
-        grid-template-columns: 1fr 1.2fr 1fr;
-      }
-
-      .explorer-layout {
-        grid-template-columns: 1fr;
-      }
-
-      .sector-layout {
-        grid-template-columns: 1fr;
-      }
-
-      .sector-chart-wrap {
-        min-height: 420px;
-      }
-
-      .qa-grid {
-        grid-template-columns: 1fr;
-      }
+    .confusion-grid {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      grid-template-rows: auto 1fr 1fr;
+      gap: 3px;
+      max-width: 420px;
+      margin: 32px auto;
     }
-
-    @media (max-width: 768px) {
-      .topbar-inner {
-        padding: 0 12px;
-        gap: 8px;
-        grid-template-columns: auto 1fr auto;
-      }
-
-      .breadcrumb {
-        display: none;
-      }
-
-      .topbar-right .chip.update-chip {
-        display: none;
-      }
-
-      .content-wrap {
-        padding: 18px 12px 48px;
-      }
-
-      .section-title {
-        font-size: 28px;
-      }
-
-      .hero-block h1 {
-        font-size: clamp(1.8rem, 8vw, 2.3rem);
-      }
-
-      .kpi-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .card {
-        padding: 18px;
-      }
-
-      .toolbar-row {
-        align-items: flex-start;
-      }
-
-      select {
-        min-width: 100%;
-      }
-
-      .topbar-search input {
-        height: 34px;
-      }
+    .confusion-grid .cg-corner { }
+    .confusion-grid .cg-header {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 8px;
     }
-
-    @media (max-width: 420px) {
-      .topbar-right .chip.scope {
-        display: none;
-      }
+    .confusion-grid .cg-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      min-height: 90px;
     }
+    .confusion-grid .cg-cell .cg-num {
+      font-family: var(--serif);
+      font-size: 2rem;
+      font-weight: 400;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .confusion-grid .cg-cell .cg-desc {
+      font-size: 0.72rem;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .cg-tp { background: rgba(15, 217, 156, 0.12); }
+    .cg-tp .cg-num { color: var(--teal); }
+    .cg-tp .cg-desc { color: var(--teal-dim); }
+    .cg-tn { background: rgba(15, 217, 156, 0.08); }
+    .cg-tn .cg-num { color: var(--teal); }
+    .cg-tn .cg-desc { color: var(--teal-dim); }
+    .cg-fp { background: rgba(240, 168, 48, 0.1); }
+    .cg-fp .cg-num { color: var(--amber); }
+    .cg-fp .cg-desc { color: var(--amber-dim); }
+    .cg-fn { background: rgba(239, 68, 68, 0.1); }
+    .cg-fn .cg-num { color: var(--red); }
+    .cg-fn .cg-desc { color: var(--red-dim); }
 
+    .limitations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .limit-card {
+      padding: 20px;
+    }
+    .limit-card .lc-emoji { font-size: 1.5rem; margin-bottom: 8px; }
+    .limit-card .lc-title { font-weight: 600; color: #fff; margin-bottom: 4px; font-size: 0.95rem; }
+    .limit-card .lc-desc { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ═══════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════ */
+    footer {
+      padding: 60px 0 40px;
+      text-align: center;
+      border-top: 1px solid var(--glass-border);
+    }
+    footer .footer-shield { font-size: 2rem; margin-bottom: 12px; display: inline-block; }
+    footer p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.8; }
+    footer a { color: var(--teal); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ═══════════════════════════════════════════════════════
+       ANIMATIONS — INITIAL STATES (GSAP will animate)
+       ═══════════════════════════════════════════════════════ */
+    .anim-fade { opacity: 0; transform: translateY(30px); }
+    .anim-fade-right { opacity: 0; transform: translateX(-30px); }
+    .anim-scale { opacity: 0; transform: scale(0.9); }
+
+    /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
-      html,
-      body {
-        scroll-behavior: auto;
-      }
-
-      * {
-        animation: none !important;
-        transition: none !important;
-      }
+      .anim-fade, .anim-fade-right, .anim-scale { opacity: 1; transform: none; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
+
+    /* ═══════════════════════════════════════════════════════
+       LOADING STATE
+       ═══════════════════════════════════════════════════════ */
+    .loading-msg {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px;
+      font-size: 0.9rem;
+    }
+    .loading-msg .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--glass-border);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div id="errorBanner" class="error-banner"></div>
 
-  <div class="app-shell">
-    <aside id="sidebar" class="sidebar" aria-label="Sidebar navigation">
-      <div class="sidebar-header">
-        <div class="sidebar-brand">
-          <span class="sidebar-logo">IS</span>
-          <span class="sidebar-brand-text">Inflation Shield</span>
-        </div>
-        <button id="sidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="Collapse sidebar">«</button>
-      </div>
-
-      <nav class="sidebar-nav" id="sideNav">
-        <button class="nav-item active" data-target="overview-section" data-section-name="Overview">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nav-label">Overview</span>
-        </button>
-        <button class="nav-item" data-target="firms-section" data-section-name="Firms">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span><span class="nav-label">Firms</span>
-        </button>
-        <button class="nav-item" data-target="sectors-section" data-section-name="Sectors">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span><span class="nav-label">Sectors</span>
-        </button>
-        <button class="nav-item" data-target="model-section" data-section-name="Model">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span class="nav-label">Model</span>
-        </button>
-        <button class="nav-item" data-target="methodology-section" data-section-name="Methodology">
-          <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="nav-label">Methodology</span>
-        </button>
-      </nav>
-
-      <footer class="sidebar-footer">
-        <div>Lakshay Malik · Shikhar Panthari · Bishwarup Bishwas · Anshuman Kumar Pati</div>
-        <div>Updated quarterly · Academic research project</div>
-      </footer>
-    </aside>
-
-    <div id="mobileOverlay" class="mobile-overlay"></div>
-
-    <main class="main-pane">
-      <header class="topbar">
-        <div class="topbar-inner">
-          <div class="topbar-left">
-            <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Open menu">☰</button>
-            <div id="breadcrumbText" class="breadcrumb">Overview</div>
-          </div>
-          <div class="topbar-search">
-            <label class="sr-only" for="topSearch">Search firms</label>
-            <input id="topSearch" type="text" placeholder="Search firms" autocomplete="off">
-            <span class="search-kbd">/</span>
-          </div>
-          <div class="topbar-right">
-            <span class="chip scope">Test period: 2012-2013</span>
-            <span id="lastUpdatedChip" class="chip update-chip">Data current as of --</span>
-          </div>
-        </div>
-      </header>
-
-      <div class="content-wrap">
-        <section id="overview-section" class="section reveal">
-          <div class="hero-block">
-            <h1>Inflation Shield - Margin Squeeze Predictor</h1>
-            <p class="hero-subtitle">Predicting <span class="term">EBITDA<span class="term-tooltip">Earnings Before Interest, Taxes, Depreciation and Amortization. A measure of operating profitability.</span></span> margin compression 2 quarters ahead · CMIE Prowess · 2012-2013 test set</p>
-          </div>
-
-          <div class="kpi-grid">
-            <article class="card kpi-card">
-              <div class="kpi-label">Coverage</div>
-              <div class="kpi-value" id="kpiCoverageValue">0</div>
-              <div class="kpi-context" id="kpiCoverageMeta">Indian large-cap firms tracked across 8 quarters</div>
-            </article>
-            <article class="card kpi-card">
-              <div class="kpi-label">High-Risk Firms Right Now</div>
-              <div class="kpi-value" id="kpiHighRiskValue">0</div>
-              <div class="kpi-context" id="kpiHighRiskMeta">Out of 30 firms tracked</div>
-            </article>
-            <article class="card kpi-card">
-              <div class="kpi-label">Average Risk Score</div>
-              <div class="kpi-value" id="kpiAvgMssValue">--</div>
-              <div class="kpi-context">Across all 30 firms</div>
-            </article>
-            <article class="card kpi-card">
-              <div class="kpi-label">Model Confidence</div>
-              <div class="kpi-value" style="font-size:36px;">Validated</div>
-              <div class="kpi-context">73% accuracy on 2012-2013 backtest. Stable across 5 retraining runs.</div>
-            </article>
-          </div>
-          <a class="method-link" href="#methodology-section">Methodology</a>
-
-          <div class="insight-banner" id="insightBanner">
-            <div class="insight-banner-title">What this dashboard tells you right now</div>
-            <div class="insight-line">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <span id="insightHighRisk">--</span>
-            </div>
-            <div class="insight-line">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-              <span id="insightSector">--</span>
-            </div>
-            <div class="insight-line">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span id="insightSafe">--</span>
-            </div>
-          </div>
-        </section>
-
-        <section id="faq-section" class="faq-section reveal">
-          <h2 class="section-title">Frequently Asked Questions</h2>
-          <p class="section-subtitle">What this dashboard shows, what it doesn't, and how to use it.</p>
-          <article class="card">
-            <div class="faq-accordion" id="faqAccordion">
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>What is this dashboard?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">Inflation Shield is an early-warning system for Indian large-cap companies. For each firm, it produces a single 0–100 score called <span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span> (Margin Squeeze Score) that estimates the risk of <span class="term">EBITDA<span class="term-tooltip">Earnings Before Interest, Taxes, Depreciation and Amortization. A measure of operating profitability.</span></span> margin compression in the next two quarters. A high MSS means the firm is more likely to see its profitability squeezed by input-cost inflation.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>What does an MSS score actually mean?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">Think of <span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span> as a relative risk ranking. A firm at MSS 80 is materially more vulnerable than one at MSS 30. Specific bands: below 40 is low risk, 40–70 is moderate, 70 and above is high. The score is not a probability — it shouldn’t be read as “an 80% chance of compression.” It’s an ordinal ranking, like a credit rating.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>How accurate is this?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">On the 2022–2023 test set, the model achieved an <span class="term">AUC<span class="term-tooltip">Area Under the Curve: 0.5 is random, 1.0 is perfect. Measures how well the model separates risky firms from safe ones.</span></span> of 0.73 (real-world range 0.67–0.73 once you account for cross-validation). For comparison, a coin flip is 0.50; 1.00 would be perfect prediction. The model correctly flagged 38% of true compression events two quarters ahead — a meaningful lift over the naive sector-baseline of around 23%, but not a guarantee. Treat MSS as one input among many, not a final answer.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>Why is the data from 2022–2023?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">We deliberately backtested on the 2022–2023 inflation cycle — a real historical period when WPI hit 10%, Brent crude crossed $115, and the rupee fell from 54 to 68 against the dollar. Backtesting on a known-outcome window is how this kind of model gets validated. The same model architecture, retrained on 2022–2025 data, would produce live forward-looking scores. The architecture is the deliverable; current-quarter retraining is operational work.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>What features drive the score?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">Six engineered indicators capture different dimensions of vulnerability: <span class="term">CPR<span class="term-tooltip">Cost Pass-through Ratio: when input costs rise, how much can the firm raise output prices?</span></span> (Cost Pass-through Ratio — can the firm raise prices when costs rise?), <span class="term">ICSI<span class="term-tooltip">Input Cost Sensitivity Index: how exposed the firm is to volatile raw material prices.</span></span> (Input Cost Sensitivity — how exposed is it to volatile raw materials?), <span class="term">IBD<span class="term-tooltip">Inventory Buffer Days: how many days of raw material the firm holds in stock as protection against price spikes.</span></span> (Inventory Buffer Days — does it have a stockpile to ride out shocks?), <span class="term">WCSS<span class="term-tooltip">Working Capital Stress Score: net difference between days the firm waits to collect from customers vs. days it takes to pay suppliers.</span></span> (Working Capital Stress), <span class="term">OL<span class="term-tooltip">Operating Leverage: share of fixed costs in the firm's cost structure. Higher = margins more volatile when sales swing.</span></span> (Operating Leverage), and <span class="term">SIB<span class="term-tooltip">Sector Inflation Beta: how much the firm's margins move when its sector's average margin moves. Like a stock beta but for margins.</span></span> (Sector Inflation Beta). The model also uses lagged margin trends and a sector control. Click any firm to see which factors are pushing its score up or down.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>Should I make investment decisions based on this?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">No. This is academic research, not financial advice. MSS surfaces firms for deeper analysis — it does not replace fundamental analysis, valuation work, or qualitative judgment. A high MSS means “investigate further,” not “sell.” A low MSS means “no immediate concern from this lens,” not “safe to buy.”</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>Why are some sectors only one firm?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">Our universe is 30 large-cap NSE/BSE firms. Many sectors in this sample are represented by a single firm (e.g., RIL is the only refinery, BHEL the only boilers & turbines firm). We show sector-level scores for completeness, but for single-firm sectors the “sector score” is really just the firm’s score. A production version would expand the universe to several hundred firms for meaningful sector aggregation.</div></div>
-              </div>
-              <div class="faq-item">
-                <button class="faq-question" type="button">
-                  <span>What’s missing from this model?</span>
-                  <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <div class="faq-answer"><div class="faq-answer-inner">Three honest limitations. First, working-capital data (inventory, trade receivables/payables) is missing for 70%+ of firm-quarters in our source data, so two of the six features (<span class="term">IBD<span class="term-tooltip">Inventory Buffer Days: how many days of raw material the firm holds in stock as protection against price spikes.</span></span>, <span class="term">WCSS<span class="term-tooltip">Working Capital Stress Score: net difference between days the firm waits to collect from customers vs. days it takes to pay suppliers.</span></span>) are sparse. Second, we have no macro overlay — no oil price, no WPI, no INR/USD as direct inputs. Third, we end in 2024, so the model has not seen current conditions. Each of these is a future enhancement.</div></div>
-              </div>
-            </div>
-          </article>
-          <p class="faq-footer">Have a question not answered here? Reach out to the team.</p>
-        </section>
-
-        <section id="firms-section" class="section reveal">
-          <h2 class="section-title">Firms</h2>
-          <p class="section-subtitle">Rank firms by latest <span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span>, filter risk, then inspect firm-level drivers and trajectory.</p>
-
-          <article class="card">
-            <div class="toolbar-row">
-              <div class="filters" id="riskFilterChips"></div>
-              <div id="leaderboardContext" class="disclaimer">Sorted by MSS (descending).</div>
-            </div>
-
-            <div class="leaderboard-wrap">
-              <div class="leaderboard-scroll">
-                <table id="leaderboardTable" aria-label="Firm leaderboard table">
-                  <thead>
-                    <tr>
-                      <th>Rank</th>
-                      <th class="sortable" data-sort-key="firm">Firm</th>
-                      <th class="sortable" data-sort-key="sector">Sector</th>
-                      <th class="sortable num" data-sort-key="mss">MSS</th>
-                      <th class="sortable" data-sort-key="band">Band</th>
-                      <th>Trend</th>
-                      <th class="sortable" data-sort-key="confidence">Confidence</th>
-                      <th class="sortable num" data-sort-key="delta">Δ vs prior</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="leaderboardBody"></tbody>
-                </table>
-              </div>
-            </div>
-          </article>
-
-          <article id="firmExplorerCard" class="card" style="margin-top:14px;">
-            <div class="explorer-head">
-              <h3 class="section-title" style="font-size:24px;margin:0;">Firm Explorer</h3>
-              <div class="explorer-select-wrap">
-                <label for="firmSelect">Firm</label>
-                <select id="firmSelect" aria-label="Firm selector"></select>
-              </div>
-            </div>
-
-            <div id="explorerCrossfade" class="crossfade">
-              <div class="explorer-layout">
-                <div class="explorer-left">
-                  <div class="identity-row">
-                    <div class="identity-meta">
-                      <div id="identityName" class="identity-name">--</div>
-                      <div id="identitySector" class="identity-sub">--</div>
-                      <div id="identityCode" class="identity-code mono">co_code: --</div>
-                    </div>
-                    <div id="identityAvatar" class="identity-avatar">-</div>
-                  </div>
-
-                  <div class="gauge-wrap">
-                    <svg width="318" height="180" viewBox="0 0 320 185" aria-label="MSS Gauge">
-                      <path d="M30,160 A130,130 0 0 1 290,160" fill="none" stroke="#eef3fa" stroke-width="22" stroke-linecap="round"></path>
-                      <path d="M30,160 A130,130 0 0 1 108,42" fill="none" stroke="rgba(13,138,106,0.85)" stroke-width="22" stroke-linecap="round"></path>
-                      <path d="M108,42 A130,130 0 0 1 212,42" fill="none" stroke="rgba(196,123,20,0.9)" stroke-width="22" stroke-linecap="round"></path>
-                      <path d="M212,42 A130,130 0 0 1 290,160" fill="none" stroke="rgba(192,57,43,0.9)" stroke-width="22" stroke-linecap="round"></path>
-                      <g id="gaugeNeedle" transform="rotate(-90 160 160)">
-                        <line x1="160" y1="160" x2="160" y2="44" stroke="#0f2d52" stroke-width="4" stroke-linecap="round"></line>
-                        <circle cx="160" cy="160" r="8.5" fill="#0f2d52"></circle>
-                      </g>
-                    </svg>
-                    <div id="gaugeScore" class="gauge-score">--</div>
-                    <div id="gaugeQuarter" class="gauge-quarter">Latest quarter: --</div>
-                    <span id="gaugeRiskPill" class="pill pill-risk-moderate">Risk: --</span>
-                  </div>
-
-                  <div id="recommendedAction" class="recommend-card">Recommended action: --</div>
-                  <div id="driverExplanation" class="driver-explanation">
-                    <div class="driver-explanation-title">What’s pushing this score?</div>
-                    <div id="driverExplanationBody">Select a firm to see what’s driving its risk score.</div>
-                  </div>
-                  <div id="similarFirms" class="similar-firms"></div>
-
-                  <div class="facts-grid">
-                    <div class="fact">
-                      <div class="fact-label">Current EBITDA Margin</div>
-                      <div id="factMargin" class="fact-value">--</div>
-                    </div>
-                    <div class="fact">
-                      <div class="fact-label">Confidence</div>
-                      <div id="factConfidence" class="fact-value">--</div>
-                    </div>
-                    <div class="fact">
-                      <div class="fact-label">Data Basis</div>
-                      <div id="factBasis" class="fact-value">--</div>
-                    </div>
-                    <div class="fact">
-                      <div class="fact-label">Outcome</div>
-                      <div id="factOutcome" class="fact-value">--</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="explorer-right">
-                  <div class="tabs" id="explorerTabs">
-                    <button class="tab-btn active" data-tab="trajectoryTab">Trajectory</button>
-                    <button class="tab-btn" data-tab="driversTab">Drivers</button>
-                    <button class="tab-btn" data-tab="detailsTab">Details</button>
-                  </div>
-
-                  <div id="trajectoryTab" class="tab-pane active">
-                    <div class="segment-row">
-                      <div class="segmented" id="trajectoryMode">
-                        <button class="segment-btn active" data-mode="both">Both</button>
-                        <button class="segment-btn" data-mode="mss">MSS</button>
-                        <button class="segment-btn" data-mode="margin">Margin</button>
-                      </div>
-                    </div>
-                    <div class="chart-wrap"><canvas id="trajectoryChart"></canvas></div>
-                  </div>
-
-                  <div id="driversTab" class="tab-pane">
-                    <div id="driverQuarterSelectWrap" class="driver-quarter-select">
-                      <label for="driverQuarterSelect">Drivers available for:</label>
-                      <select id="driverQuarterSelect"></select>
-                    </div>
-                    <div id="driversChartWrap" class="chart-wrap canvas-small"><canvas id="driversChart"></canvas></div>
-                    <div class="driver-note">Top 5 <span class="term">SHAP<span class="term-tooltip">A method for explaining which features pushed a prediction up or down. Positive value increases risk; negative decreases it.</span></span> contributors by absolute impact from interpretable features only.</div>
-                  </div>
-
-                  <div id="detailsTab" class="tab-pane">
-                    <div class="details-table-wrap">
-                      <table class="details-table">
-                        <thead>
-                          <tr>
-                            <th>Feature</th>
-                            <th class="num">Raw value</th>
-                            <th class="num">SHAP</th>
-                          </tr>
-                        </thead>
-                        <tbody id="detailsTableBody"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-        </section>
-
-        <section id="sectors-section" class="section reveal">
-          <h2 class="section-title">Sectors</h2>
-          <p class="section-subtitle">Sector-level <span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span> from latest firm-quarter observations, with direct filter handoff to the leaderboard.</p>
-          <div class="toggle-row">
-            <div class="toggle" id="sectorToggle">
-              <button class="active" type="button" data-view="bar">Bar chart</button>
-              <button type="button" data-view="heat">Heat map</button>
-            </div>
-          </div>
-          <div class="sector-layout">
-            <article class="card" id="sectorBarCard">
-              <div class="sector-chart-wrap"><canvas id="sectorChart"></canvas></div>
-              <p class="disclaimer">Most sectors have only 1 firm in the dataset. Cross-sector comparison is directional, not statistical.</p>
-            </article>
-            <article class="card" id="sectorHeatCard" style="display:none;grid-column:1/-1;">
-              <div class="heatmap-wrap active" id="heatmapWrap"></div>
-              <p class="heatmap-caption">Each cell shows the mean MSS for firms in that sector for that quarter. Darker red = higher near-term margin compression risk. Diagonal stripes = no firms in our sample for that sector-quarter.</p>
-            </article>
-            <article class="card sector-summary-panel" id="sectorSummaryPanel">
-              <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:4px;">Sector Summary</h3>
-              <div class="summary-stat">
-                <div class="summary-stat-label">Total Sectors Covered</div>
-                <div class="summary-stat-value" id="sectorCountValue">--</div>
-              </div>
-              <div class="summary-stat">
-                <div class="summary-stat-label">High-Risk Sectors (<span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span> ≥ 70)</div>
-                <div class="summary-stat-value" id="sectorHighRiskValue">--</div>
-              </div>
-              <div class="summary-stat">
-                <div class="summary-stat-label">Firms Across All Sectors</div>
-                <div class="summary-stat-value" id="sectorFirmCountValue">--</div>
-              </div>
-              <div class="summary-stat">
-                <div class="summary-stat-label">Top 3 Sectors by Mean MSS</div>
-                <ul class="sector-top-list" id="sectorTopList"></ul>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section id="model-section" class="section reveal">
-          <h2 class="section-title">Model</h2>
-          <p class="section-subtitle">Understanding how the model works and its limitations.</p>
-
-          <div class="model-grid">
-            <article class="card">
-              <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:12px;">How reliable is this model?</h3>
-              <div style="font-size:14px;color:var(--ink);line-height:1.7;">
-                <p style="margin-bottom:12px;">On historical out-of-sample data (2012-2013), the model correctly separated firms heading toward margin compression from those that weren’t with 73% accuracy (technically: <span class="term">AUC<span class="term-tooltip">Area Under the Curve: 0.5 is random, 1.0 is perfect. Measures how well the model separates risky firms from safe ones.</span></span> 0.73). The model is stable — across five different randomized retraining runs, the score stays within ±0.6 percentage points. We chose this simpler model over a more complex alternative (XGBoost) because it’s more reproducible and the performance is statistically equivalent.</p>
-                <p><strong>What this means in practice:</strong> trust the relative ranking of firms more than the absolute MSS number. A firm at MSS 80 is meaningfully more at risk than one at MSS 30. The exact numeric difference matters less than the rank order.</p>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:12px;">What this model can’t do</h3>
-              <div style="font-size:14px;color:var(--ink);line-height:1.7;">
-                <p style="margin-bottom:12px;">This model is trained on 2012-2013 data and has not seen the 2020 pandemic, the 2022 commodity spike, or current market conditions. It does not predict crashes, default risk, or stock returns — only operating margin compression, two quarters ahead. It works best when combined with qualitative judgment, not as a sole input to investment decisions.</p>
-                <p>To deploy this in production, we would need to retrain on 2022-2025 quarterly data and add macroeconomic features (oil prices, INR/USD, Indian WPI inflation). That’s the natural next step.</p>
-              </div>
-            </article>
-          </div>
-
-          <article class="card">
-            <h3 style="font-size:20px;font-family:'Instrument Serif',serif;color:var(--navy);margin-bottom:8px;">Dynamic Insights</h3>
-            <div class="qa-grid">
-              <div class="qa-item">
-                <div class="qa-q">Where is current risk concentrated?</div>
-                <div id="qaRiskConcentration" class="qa-a">--</div>
-              </div>
-              <div class="qa-item">
-                <div class="qa-q">What explains the selected firm score?</div>
-                <div id="qaSelectedDrivers" class="qa-a">--</div>
-              </div>
-            </div>
-            <p class="disclaimer"><span class="term">MSS<span class="term-tooltip">Margin Squeeze Score: a 0–100 ranking of how vulnerable a firm is to margin compression.</span></span> is most reliable as a relative ranking across firms. Calibration (<span class="term">Brier score<span class="term-tooltip">How well the predicted probability matches reality. Lower is better. Below 0.20 is good for binary risk models.</span></span> 0.23) implies absolute probabilities should be interpreted cautiously.</p>
-          </article>
-        </section>
-
-        <section id="methodology-section" class="section reveal">
-          <h2 class="section-title">Methodology</h2>
-          <article class="card about-block">
-            <div class="methodology-flow">
-              <svg viewBox="0 0 600 120" width="600" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0" y="10" width="160" height="100" rx="10" fill="#e8f1fb" stroke="#c9dbf5" stroke-width="1.5"/>
-                <text x="80" y="32" text-anchor="middle" font-size="11" font-weight="600" fill="#0f2d52">6 Feature Inputs</text>
-                <text x="80" y="50" text-anchor="middle" font-size="9" fill="#667085">CPR · ICSI · IBD</text>
-                <text x="80" y="64" text-anchor="middle" font-size="9" fill="#667085">WCSS · OL · SIB</text>
-                <text x="80" y="82" text-anchor="middle" font-size="9" fill="#667085">+ lag &amp; momentum</text>
-                <text x="80" y="96" text-anchor="middle" font-size="9" fill="#667085">+ sector control</text>
-                <path d="M170 60 L215 60" stroke="#0f2d52" stroke-width="2" marker-end="url(#arrowhead)"/>
-                <rect x="220" y="25" width="160" height="70" rx="10" fill="#0f2d52"/>
-                <text x="300" y="55" text-anchor="middle" font-size="13" font-weight="600" fill="#ffffff">LightGBM</text>
-                <text x="300" y="75" text-anchor="middle" font-size="9" fill="#c9dbf5">Tuned · 50 Optuna trials</text>
-                <path d="M390 60 L435 60" stroke="#0f2d52" stroke-width="2" marker-end="url(#arrowhead)"/>
-                <rect x="440" y="10" width="160" height="100" rx="10" fill="#e8f1fb" stroke="#c9dbf5" stroke-width="1.5"/>
-                <text x="520" y="35" text-anchor="middle" font-size="11" font-weight="600" fill="#0f2d52">MSS Score</text>
-                <text x="520" y="55" text-anchor="middle" font-size="22" font-weight="600" fill="#0f2d52" font-style="italic">0 – 100</text>
-                <text x="520" y="80" text-anchor="middle" font-size="9" fill="#667085">Per firm, per quarter</text>
-                <text x="520" y="95" text-anchor="middle" font-size="9" fill="#667085">2 quarters ahead</text>
-                <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#0f2d52"/></marker></defs>
-              </svg>
-              <div class="methodology-flow-caption">How a firm's MSS is calculated: six engineered features plus lag/momentum inputs feed a tuned LightGBM model.</div>
-            </div>
-            <p><strong>Data:</strong> CMIE Prowess quarterly financials, 30 large NSE/BSE-listed Indian firms, 2005-2024. Test set = 2012-2013.</p>
-            <p><strong>Target:</strong> Binary indicator of at least 150 bps EBITDA margin compression over next 2 quarters.</p>
-            <p><strong>Model:</strong> Tuned LightGBM (Optuna, 50 trials), 23 features including CPR, ICSI, IBD, WCSS, OL, SIB plus lag and momentum features.</p>
-            <p><strong>Limitations:</strong> 30-firm universe, ends 2024, inventory/working-capital fields sparse (<span class="term">IBD<span class="term-tooltip">Inventory Buffer Days: how many days of raw material the firm holds in stock as protection against price spikes.</span></span> and <span class="term">WCSS<span class="term-tooltip">Working Capital Stress Score: net difference between days the firm waits to collect from customers vs. days it takes to pay suppliers.</span></span> computable for less than 30% of rows), no macro features (WPI/Brent/INR-USD).</p>
-            <div class="footer-line">Lakshay Malik · Shikhar Panthari · Bishwarup Bishwas · Anshuman Kumar Pati</div>
-            <div class="shortcuts-expand">
-              <button class="shortcuts-toggle" type="button" id="shortcutsToggleBtn">Keyboard shortcuts ▸</button>
-              <div class="shortcuts-content" id="shortcutsContent">
-                <ul class="shortcut-list" style="margin-top:10px;">
-                  <li><b>/</b> Focus firm search</li>
-                  <li><b>1-5</b> Jump to section</li>
-                  <li><b>Esc</b> Clear search and filters</li>
-                  <li><b>↑ / ↓</b> Navigate firm selector options</li>
-                </ul>
-              </div>
-            </div>
-          </article>
-        </section>
-      </div>
-    </main>
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 0: HERO
+     ═══════════════════════════════════════════════════════ -->
+<section id="hero">
+  <canvas id="particles-canvas"></canvas>
+  <div class="hero-shield anim-scale">🛡️</div>
+  <h1 class="hero-title anim-fade">
+    Inflation <em>Shield</em>
+  </h1>
+  <p class="hero-sub anim-fade">
+    Can we predict which companies will get squeezed by inflation — <strong>before</strong> it happens?
+  </p>
+  <div class="hero-chips anim-fade">
+    <span class="chip">30 BSE Sensex Firms</span>
+    <span class="chip">CMIE Prowess Data</span>
+    <span class="chip">Machine Learning</span>
+    <span class="chip">2 Quarters Ahead</span>
   </div>
+  <div class="scroll-hint">
+    <span>Scroll to explore</span>
+    <div class="arrow"></div>
+  </div>
+</section>
 
-  <script>
-    const COLORS = {
-      navy: "#0f2d52",
-      blue: "#1d6fce",
-      lightBlue: "#e8f1fb",
-      teal: "#0d8a6a",
-      amber: "#c47b14",
-      red: "#c0392b",
-      ink: "#1a1f2e",
-      muted: "#667085",
-      grid: "#e8eef8"
-    };
-     const FIRM_DOMAINS = {
-  "33769":  "bhel.com",
-  "34162":  "airtel.com",
-  "47858":  "cipla.com",
-  "48799":  "coalindia.in",
-  "62987":  "drreddys.com",
-  "79498":  "gailonline.com",
-  "88297":  "hdfcbank.com",
-  "92590":  "heromotocorp.com",
-  "93902":  "hindalco.com",
-  "94080":  "hul.co.in",
-  "95632":  "hdfc.com",
-  "96379":  "icicibank.com",
-  "97066":  "itcportal.com",
-  "100632": "infosys.com",
-  "127106": "larsentoubro.com",
-  "136444": "mahindra.com",
-  "140829": "marutisuzuki.com",
-  "155695": "ntpc.co.in",
-  "163226": "ongcindia.com",
-  "164646": "tcs.com",
-  "196667": "ril.com",
-  "216946": "sesamining.com",
-  "236328": "sbi.co.in",
-  "239726": "sunpharma.com",
-  "248093": "tatamotors.com",
-  "248136": "tatasteel.com",
-  "248165": "tatapower.com",
-  "256066": "axisbank.com",
-  "272724": "wipro.com",
-  "374518": "bajajauto.com"
-};
-    const INTERPRETABLE_FEATURES = [
-      "CPR",
-      "ICSI",
-      "IBD",
-      "WCSS",
-      "OL",
-      "SIB",
-      "rm_pct_of_sales",
-      "EBITDA_margin_pct",
-      "margin_lag_1",
-      "margin_change_4q",
-      "CPR_x_ICSI"
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 1: "DO YOU KNOW?" — THE PROBLEM
+     ═══════════════════════════════════════════════════════ -->
+<section id="problem" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">Do You Know?</div>
+    <div class="dyk-question anim-fade">
+      <span class="emoji">🤔</span> What happens when a company's input costs rise... but it <em>can't</em> raise its prices?
+    </div>
+
+    <div class="squeeze-visual anim-fade">
+      <div class="squeeze-bar">
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-revenue" style="height: 0%; background: var(--teal);"></div>
+        </div>
+        <div class="bar-label">Revenue</div>
+        <div class="bar-value" style="color: var(--teal);">₹100</div>
+      </div>
+      <div class="squeeze-bar">
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-costs" style="height: 0%; background: var(--red);"></div>
+        </div>
+        <div class="bar-label">Input Costs</div>
+        <div class="bar-value" style="color: var(--red);">₹85 → ₹95</div>
+      </div>
+      <div class="squeeze-bar">
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-margin" style="height: 0%; background: var(--amber);"></div>
+        </div>
+        <div class="bar-label">Profit Margin</div>
+        <div class="bar-value" style="color: var(--amber);">₹15 → ₹5</div>
+      </div>
+    </div>
+
+    <div class="callout-box anim-fade">
+      That's called a <strong>margin squeeze</strong>. It's the silent profit killer — revenue looks fine, but profits are evaporating underneath.
+    </div>
+
+    <div class="stat-big anim-fade">
+      <span class="number" data-count="33">0</span>
+      <span class="label">percent of firm-quarters in our data saw margins drop by 1.5+ percentage points. <strong>1 in 3.</strong></span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 2: "WHAT IF?" — THE QUESTION
+     ═══════════════════════════════════════════════════════ -->
+<section id="question" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">What If?</div>
+    <h2 class="section-title anim-fade">What if you could see it coming — <em>6 months in advance?</em></h2>
+    <p class="lead anim-fade">
+      We built a model that scores each company every quarter on a scale of 0 to 100. We call it the <strong>Margin Squeeze Score</strong>.
+    </p>
+
+    <div class="gauge-container anim-scale">
+      <svg class="gauge-svg" viewBox="0 0 300 180" fill="none">
+        <!-- Background arc -->
+        <path d="M 30 160 A 120 120 0 0 1 270 160" stroke="rgba(255,255,255,0.06)" stroke-width="18" stroke-linecap="round" fill="none"/>
+        <!-- Green zone -->
+        <path d="M 30 160 A 120 120 0 0 1 110 32" stroke="rgba(15, 217, 156, 0.3)" stroke-width="18" stroke-linecap="round" fill="none"/>
+        <!-- Amber zone -->
+        <path d="M 110 32 A 120 120 0 0 1 190 32" stroke="rgba(240, 168, 48, 0.3)" stroke-width="18" stroke-linecap="round" fill="none"/>
+        <!-- Red zone -->
+        <path d="M 190 32 A 120 120 0 0 1 270 160" stroke="rgba(239, 68, 68, 0.3)" stroke-width="18" stroke-linecap="round" fill="none"/>
+        <!-- Needle (animated) -->
+        <line id="gauge-needle" x1="150" y1="160" x2="150" y2="50" stroke="white" stroke-width="3" stroke-linecap="round" transform="rotate(-90, 150, 160)"/>
+        <!-- Center dot -->
+        <circle cx="150" cy="160" r="8" fill="var(--bg-deep)" stroke="white" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="gauge-label anim-fade">
+      <div class="score" id="gauge-score">0</div>
+      <div class="desc">Margin Squeeze Score (MSS)</div>
+    </div>
+
+    <div class="score-legend anim-fade">
+      <div class="score-legend-item">
+        <div class="dot" style="background: var(--teal);"></div>
+        <span>0–34: Stable</span>
+      </div>
+      <div class="score-legend-item">
+        <div class="dot" style="background: var(--amber);"></div>
+        <span>35–44: Watch closely</span>
+      </div>
+      <div class="score-legend-item">
+        <div class="dot" style="background: var(--red);"></div>
+        <span>45+: High risk</span>
+      </div>
+    </div>
+
+    <div class="callout-box anim-fade" style="margin-top: 40px;">
+      A score of <strong>45+</strong> means: <em>"Watch out — this company's margins might be shrinking over the next two quarters."</em> It's not a crystal ball, but it's better than guessing.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 3: "HOW?" — THE 6 INSTRUMENTS
+     ═══════════════════════════════════════════════════════ -->
+<section id="features" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">Do You Know?</div>
+    <h2 class="section-title anim-fade">We look at <em>6 vital signs</em> of a company's pricing power</h2>
+    <p class="lead anim-fade">
+      Think of these like a doctor's checkup — but for a company's ability to survive inflation.
+    </p>
+
+    <div class="features-grid">
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">💰</div>
+        <div class="feat-code">CPR</div>
+        <div class="feat-name">Cost Pass-Through</div>
+        <div class="feat-desc">Can the company pass cost increases to its customers? A CPR above 1.0 means "yes — they raise prices even faster than costs rise." Below 1.0? They're absorbing the hit.</div>
+      </div>
+
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">🎢</div>
+        <div class="feat-code">ICSI</div>
+        <div class="feat-name">Input Cost Volatility</div>
+        <div class="feat-desc">How wildly are raw material costs swinging? A steel company facing 30% quarterly swings in iron ore prices is far more exposed than an IT company buying cloud credits.</div>
+      </div>
+
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">📦</div>
+        <div class="feat-code">IBD</div>
+        <div class="feat-name">Inventory Buffer</div>
+        <div class="feat-desc">Does the company stockpile raw materials as a cushion? More inventory days = more time before price increases hit the P&L. But it also ties up cash.</div>
+      </div>
+
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">⏳</div>
+        <div class="feat-code">WCSS</div>
+        <div class="feat-name">Working Capital Stress</div>
+        <div class="feat-desc">Are customers paying slower than suppliers demand payment? When debtor days exceed creditor days, cash flow gets squeezed — and margins follow.</div>
+      </div>
+
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">🔒</div>
+        <div class="feat-code">OL</div>
+        <div class="feat-name">Fixed Cost Burden</div>
+        <div class="feat-desc">How much of the company's cost structure is fixed (employees, rent, depreciation)? High fixed costs mean you can't easily cut expenses when revenue dips.</div>
+      </div>
+
+      <div class="card feature-card anim-fade">
+        <div class="feat-emoji">📊</div>
+        <div class="feat-code">SIB</div>
+        <div class="feat-name">Sector Sensitivity</div>
+        <div class="feat-desc">Is this company more or less inflation-sensitive than its industry peers? A SIB above 1.0 means the company's margins move more than the sector average when inflation hits.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 4: THE SCOREBOARD
+     ═══════════════════════════════════════════════════════ -->
+<section id="scoreboard" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">The Results</div>
+    <h2 class="section-title anim-fade">Here's how India's <em>30 largest companies</em> scored</h2>
+    <p class="lead anim-fade">
+      Click any firm to see what's driving its risk — and how its score changed over time.
+    </p>
+
+    <div class="leaderboard" id="leaderboard">
+      <div class="loading-msg"><span class="spinner"></span> Loading firm data...</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5: SECTOR VIEW
+     ═══════════════════════════════════════════════════════ -->
+<section id="sectors" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">Do You Know?</div>
+    <h2 class="section-title anim-fade">Some industries are built to absorb inflation. <em>Others aren't.</em></h2>
+    <p class="lead anim-fade">
+      The gap between the safest and riskiest sectors? Over 20 MSS points.
+    </p>
+
+    <div class="sector-bars" id="sector-bars">
+      <div class="loading-msg"><span class="spinner"></span> Loading sector data...</div>
+    </div>
+
+    <div class="sector-callouts" id="sector-callouts"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 6: MODEL CARD — "HOW GOOD IS IT?"
+     ═══════════════════════════════════════════════════════ -->
+<section id="modelcard" class="section">
+  <div class="container">
+    <div class="eyebrow anim-fade">Honest Assessment</div>
+    <h2 class="section-title anim-fade">No model is perfect. <em>Here's exactly how good ours is.</em></h2>
+    <p class="lead anim-fade">
+      We believe in showing the receipts — not just the highlights.
+    </p>
+
+    <div class="model-stats" id="model-stats">
+      <div class="card model-stat-card anim-fade">
+        <div class="ms-value" data-count="72.5">0</div>
+        <div class="ms-label">AUC Score<br><span style="font-size:0.72rem; color:var(--text-dim)">Out of 100 random pairs, correctly ranks the riskier firm 72.5 times</span></div>
+      </div>
+      <div class="card model-stat-card anim-fade">
+        <div class="ms-value" data-count="15">0</div>
+        <div class="ms-label">AUC points<br><span style="font-size:0.72rem; color:var(--text-dim)">Better than the naive "just guess the sector average" baseline</span></div>
+      </div>
+      <div class="card model-stat-card anim-fade">
+        <div class="ms-value" data-count="120">0</div>
+        <div class="ms-label">Test quarters<br><span style="font-size:0.72rem; color:var(--text-dim)">Out-of-sample test on 2012–2013 data the model never saw during training</span></div>
+      </div>
+    </div>
+
+    <h3 style="font-family: var(--serif); font-size: 1.4rem; color: #fff; margin: 40px 0 8px;" class="anim-fade">
+      🤔 "So when it makes a prediction, how often is it right?"
+    </h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem;" class="anim-fade">
+      Here's every prediction it made on the test set, sorted into four buckets:
+    </p>
+
+    <div class="confusion-grid anim-scale" id="confusion-grid">
+      <div class="cg-corner"></div>
+      <div class="cg-header">Predicted:<br>No Squeeze</div>
+      <div class="cg-header">Predicted:<br>Squeeze</div>
+
+      <div class="cg-header" style="text-align: right;">Actually:<br>No Squeeze</div>
+      <div class="cg-cell cg-tn">
+        <div class="cg-num" data-count="79">0</div>
+        <div class="cg-desc">✅ Correctly said<br>"you're safe"</div>
+      </div>
+      <div class="cg-cell cg-fp">
+        <div class="cg-num" data-count="7">0</div>
+        <div class="cg-desc">⚠️ False alarm<br>(cried wolf)</div>
+      </div>
+
+      <div class="cg-header" style="text-align: right;">Actually:<br>Squeeze</div>
+      <div class="cg-cell cg-fn">
+        <div class="cg-num" data-count="23">0</div>
+        <div class="cg-desc">❌ Missed it<br>(didn't warn)</div>
+      </div>
+      <div class="cg-cell cg-tp">
+        <div class="cg-num" data-count="11">0</div>
+        <div class="cg-desc">✅ Caught it<br>(warned correctly)</div>
+      </div>
+    </div>
+
+    <div class="callout-box anim-fade" style="margin-top: 32px;">
+      <strong>The honest range:</strong> Real-world AUC is probably <strong>0.65 – 0.75</strong>. The model meaningfully outperforms a naive baseline, but it misses about 2 out of 3 actual squeeze events. It's a useful signal, not a crystal ball.
+    </div>
+
+    <h3 style="font-family: var(--serif); font-size: 1.4rem; color: #fff; margin: 48px 0 16px;" class="anim-fade">
+      🚧 What we can't do (yet)
+    </h3>
+
+    <div class="limitations">
+      <div class="card limit-card anim-fade">
+        <div class="lc-emoji">📅</div>
+        <div class="lc-title">Data ends in 2014</div>
+        <div class="lc-desc">The model hasn't seen GST (2017), COVID-19 (2020), or post-pandemic commodity spikes. Retraining on fresh data is the natural next step.</div>
+      </div>
+      <div class="card limit-card anim-fade">
+        <div class="lc-emoji">🏢</div>
+        <div class="lc-title">Only 30 firms</div>
+        <div class="lc-desc">Enough for gradient boosting, but too few for deep learning to really shine. Expanding to BSE 500 would unlock more statistical power.</div>
+      </div>
+      <div class="card limit-card anim-fade">
+        <div class="lc-emoji">🌍</div>
+        <div class="lc-title">No macro features</div>
+        <div class="lc-desc">We don't include Brent crude prices, WPI inflation, or INR-USD exchange rates. Adding these would likely help commodity-sensitive firms.</div>
+      </div>
+      <div class="card limit-card anim-fade">
+        <div class="lc-emoji">📉</div>
+        <div class="lc-title">Sparse balance sheet data</div>
+        <div class="lc-desc">Inventory and working capital data is ~85-92% missing before 2010. Two of our six features (IBD, WCSS) are weakened by this.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-shield">🛡️</div>
+    <p>
+      <strong style="color: var(--text);">Inflation Shield</strong> — a predictive analytics project<br>
+      Data: <a href="https://prowessiq.cmie.com/" target="_blank">CMIE Prowess</a> quarterly financials · 30 BSE Sensex firms · 1995–2014<br>
+      Model: LightGBM + LSTM ensemble · Tuned with Optuna · Explained with SHAP<br>
+      <a href="https://github.com/Lakshayx007/inflation-shield" target="_blank">View on GitHub ↗</a>
+    </p>
+  </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ─── PARTICLES (hero background) ─────────────────────── */
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 60;
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth * devicePixelRatio;
+    canvas.height = canvas.offsetHeight * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+
+  function createParticles() {
+    particles = [];
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 2 + 0.5,
+        dx: (Math.random() - 0.5) * 0.3,
+        dy: (Math.random() - 0.5) * 0.3,
+        opacity: Math.random() * 0.3 + 0.05
+      });
+    }
+  }
+
+  function drawParticles() {
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    ctx.clearRect(0, 0, w, h);
+    particles.forEach(p => {
+      p.x += p.dx;
+      p.y += p.dy;
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(15, 217, 156, ${p.opacity})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawParticles);
+  }
+
+  resizeCanvas();
+  createParticles();
+  drawParticles();
+  window.addEventListener('resize', () => { resizeCanvas(); createParticles(); });
+
+  /* ─── GSAP SCROLL ANIMATIONS ──────────────────────────── */
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Fade-up entries
+  gsap.utils.toArray('.anim-fade').forEach(el => {
+    gsap.to(el, {
+      opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+      scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+    });
+  });
+
+  // Fade-right entries
+  gsap.utils.toArray('.anim-fade-right').forEach(el => {
+    gsap.to(el, {
+      opacity: 1, x: 0, duration: 0.8, ease: 'power2.out',
+      scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+    });
+  });
+
+  // Scale entries
+  gsap.utils.toArray('.anim-scale').forEach(el => {
+    gsap.to(el, {
+      opacity: 1, scale: 1, duration: 0.8, ease: 'back.out(1.4)',
+      scrollTrigger: { trigger: el, start: 'top 85%', once: true }
+    });
+  });
+
+  // Feature cards stagger
+  ScrollTrigger.create({
+    trigger: '.features-grid',
+    start: 'top 80%',
+    once: true,
+    onEnter: () => {
+      gsap.to('.feature-card', {
+        opacity: 1, y: 0, duration: 0.6, stagger: 0.12, ease: 'power2.out'
+      });
+    }
+  });
+
+  /* ─── ANIMATED BARS (Problem section) ─────────────────── */
+  ScrollTrigger.create({
+    trigger: '#problem',
+    start: 'top 60%',
+    once: true,
+    onEnter: () => {
+      gsap.to('#bar-revenue', { height: '70%', duration: 1.2, ease: 'power2.out' });
+      gsap.to('#bar-costs', { height: '85%', duration: 1.2, ease: 'power2.out', delay: 0.2 });
+      gsap.to('#bar-margin', { height: '15%', duration: 1.2, ease: 'power2.out', delay: 0.4 });
+    }
+  });
+
+  /* ─── COUNTER ANIMATIONS ──────────────────────────────── */
+  function animateCounter(el, target, duration = 1.5, decimals = 0, suffix = '') {
+    const obj = { val: 0 };
+    gsap.to(obj, {
+      val: target,
+      duration,
+      ease: 'power2.out',
+      onUpdate: () => {
+        el.textContent = obj.val.toFixed(decimals) + suffix;
+      }
+    });
+  }
+
+  // "1 in 3" stat
+  ScrollTrigger.create({
+    trigger: '.stat-big',
+    start: 'top 80%',
+    once: true,
+    onEnter: () => {
+      const el = document.querySelector('.stat-big .number');
+      animateCounter(el, 33, 1.8, 0, '%');
+    }
+  });
+
+  /* ─── GAUGE ANIMATION ─────────────────────────────────── */
+  ScrollTrigger.create({
+    trigger: '.gauge-container',
+    start: 'top 75%',
+    once: true,
+    onEnter: () => {
+      const needle = document.getElementById('gauge-needle');
+      const scoreEl = document.getElementById('gauge-score');
+      // Animate needle from -90 (left) to ~0 (middle-ish, representing ~50)
+      const targetAngle = -15; // roughly middle of gauge
+      gsap.to(needle, {
+        attr: { transform: `rotate(${targetAngle}, 150, 160)` },
+        duration: 2,
+        ease: 'power2.out'
+      });
+      animateCounter(scoreEl, 42, 2, 0);
+    }
+  });
+
+  /* ─── MODEL CARD COUNTERS ─────────────────────────────── */
+  ScrollTrigger.create({
+    trigger: '#model-stats',
+    start: 'top 80%',
+    once: true,
+    onEnter: () => {
+      document.querySelectorAll('.model-stat-card .ms-value[data-count]').forEach(el => {
+        const target = parseFloat(el.dataset.count);
+        const decimals = target % 1 !== 0 ? 1 : 0;
+        animateCounter(el, target, 1.5, decimals);
+      });
+    }
+  });
+
+  // Confusion matrix counters
+  ScrollTrigger.create({
+    trigger: '#confusion-grid',
+    start: 'top 80%',
+    once: true,
+    onEnter: () => {
+      document.querySelectorAll('.cg-cell .cg-num[data-count]').forEach(el => {
+        animateCounter(el, parseInt(el.dataset.count), 1.2);
+      });
+    }
+  });
+
+  /* ─── HELPER: COLOR FOR MSS ───────────────────────────── */
+  function mssColor(mss) {
+    if (mss >= 45) return 'var(--red)';
+    if (mss >= 35) return 'var(--amber)';
+    return 'var(--teal)';
+  }
+  function mssChipClass(mss) {
+    if (mss >= 45) return 'chip-red';
+    if (mss >= 35) return 'chip-amber';
+    return 'chip-green';
+  }
+  function mssLabel(mss) {
+    if (mss >= 45) return 'High Risk';
+    if (mss >= 35) return 'Watch';
+    return 'Stable';
+  }
+
+  /* ─── PLAIN-ENGLISH SHAP LABELS ───────────────────────── */
+  const featureLabels = {
+    'EBITDA_margin_pct': 'Current margin level',
+    'margin_lag_1': "Last quarter's margin",
+    'margin_lag_2': 'Margin 2 quarters ago',
+    'margin_lag_4': 'Margin a year ago',
+    'margin_change_4q': 'Margin trend (1-year change)',
+    'margin_std_4q': 'Margin volatility',
+    'OL': 'Fixed cost burden',
+    'CPR': 'Cost pass-through ability',
+    'ICSI': 'Input cost volatility',
+    'IBD': 'Inventory buffer days',
+    'WCSS': 'Working capital stress',
+    'SIB': 'Sector inflation sensitivity',
+    'rm_pct_of_sales': 'Raw material cost share',
+    'power_pct_of_sales': 'Power & fuel cost share',
+    'log_net_sales': 'Company size (revenue)',
+    'sector_relative_margin': 'Margin vs sector peers',
+    'CPR_x_ICSI': 'Pass-through × volatility interaction',
+    'rm_mix_drift_8q': 'Material cost mix shift',
+    'sector_enc': 'Industry sector',
+    'year_enc': 'Year effect',
+    'qtr_enc': 'Seasonal quarter'
+  };
+
+  /* ─── DATA LOADING & RENDERING ────────────────────────── */
+  async function loadData() {
+    try {
+      const [predictions, metrics, sectors, drivers] = await Promise.all([
+        fetch('outputs/predictions.json').then(r => r.json()),
+        fetch('outputs/metrics.json').then(r => r.json()),
+        fetch('outputs/sector_summary.json').then(r => r.json()),
+        fetch('outputs/drivers.json').then(r => r.json())
+      ]);
+      renderLeaderboard(predictions, drivers);
+      renderSectors(sectors);
+      updateModelCard(metrics);
+    } catch (e) {
+      console.error('Failed to load data:', e);
+      document.getElementById('leaderboard').innerHTML =
+        `<div class="callout-box" style="border-left-color: var(--red);">
+           ⚠️ <strong>Could not load data.</strong> Make sure you're serving this page via HTTP
+           (run <code>python -m http.server 8000</code> in the project folder).
+         </div>`;
+    }
+  }
+
+  /* ─── LEADERBOARD ─────────────────────────────────────── */
+  function renderLeaderboard(predictions, drivers) {
+    // Compute average MSS per firm
+    const firmMap = {};
+    predictions.forEach(r => {
+      if (!firmMap[r.short_name]) {
+        firmMap[r.short_name] = { name: r.short_name, sector: r.sector, scores: [], quarters: [] };
+      }
+      firmMap[r.short_name].scores.push(r.mss);
+      firmMap[r.short_name].quarters.push({ q: r.quarter, mss: r.mss });
+    });
+
+    const firms = Object.values(firmMap).map(f => ({
+      ...f,
+      avgMss: f.scores.reduce((a, b) => a + b, 0) / f.scores.length,
+      quarters: f.quarters.sort((a, b) => a.q.localeCompare(b.q))
+    })).sort((a, b) => b.avgMss - a.avgMss);
+
+    const maxMss = Math.max(...firms.map(f => f.avgMss));
+    const container = document.getElementById('leaderboard');
+    container.innerHTML = '';
+
+    firms.forEach((firm, i) => {
+      // Row
+      const row = document.createElement('div');
+      row.className = 'lb-row';
+      row.innerHTML = `
+        <div class="rank">${i + 1}</div>
+        <div class="firm-info">
+          <div class="firm-name">${firm.name}</div>
+          <div class="firm-sector">${firm.sector}</div>
+        </div>
+        <div>
+          <span class="mss-value" style="color: ${mssColor(firm.avgMss)}">${firm.avgMss.toFixed(1)}</span>
+          <span class="chip ${mssChipClass(firm.avgMss)}" style="margin-left: 8px; font-size: 0.65rem;">${mssLabel(firm.avgMss)}</span>
+        </div>
+        <div class="mss-bar-track">
+          <div class="mss-bar-fill" data-width="${(firm.avgMss / maxMss) * 100}" style="background: ${mssColor(firm.avgMss)};"></div>
+        </div>
+      `;
+
+      // Expand panel
+      const expand = document.createElement('div');
+      expand.className = 'lb-expand';
+      expand.innerHTML = `<div class="lb-expand-inner">
+        <div>
+          <strong style="font-size: 0.85rem; color: #fff;">🔍 What's driving the risk?</strong>
+          <ul class="driver-list" id="drivers-${i}"></ul>
+        </div>
+        <div>
+          <strong style="font-size: 0.85rem; color: #fff;">📈 MSS over time</strong>
+          <div class="sparkline-container">
+            <canvas id="spark-${i}" style="width:100%; height:100%;"></canvas>
+          </div>
+        </div>
+      </div>`;
+
+      row.addEventListener('click', () => {
+        const isOpen = expand.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.lb-expand.open').forEach(e => e.classList.remove('open'));
+        if (!isOpen) {
+          expand.classList.add('open');
+          renderDrivers(drivers, firm.name, `drivers-${i}`);
+          renderSparkline(firm.quarters, `spark-${i}`);
+        }
+      });
+
+      container.appendChild(row);
+      container.appendChild(expand);
+    });
+
+    // Animate bars on scroll
+    ScrollTrigger.create({
+      trigger: '#leaderboard',
+      start: 'top 70%',
+      once: true,
+      onEnter: () => {
+        document.querySelectorAll('.mss-bar-fill[data-width]').forEach((el, i) => {
+          gsap.to(el, {
+            width: el.dataset.width + '%',
+            duration: 1,
+            delay: i * 0.03,
+            ease: 'power2.out'
+          });
+        });
+        // Stagger row fade-in
+        gsap.from('.lb-row', {
+          opacity: 0, x: -20, duration: 0.4, stagger: 0.04, ease: 'power2.out'
+        });
+      }
+    });
+  }
+
+  /* ─── SHAP DRIVERS ────────────────────────────────────── */
+  function renderDrivers(allDrivers, firmName, containerId) {
+    const el = document.getElementById(containerId);
+    if (el.children.length > 0) return; // already rendered
+
+    const firmData = allDrivers[firmName];
+    if (!firmData) {
+      el.innerHTML = '<li style="color:var(--text-dim)">No driver data available</li>';
+      return;
+    }
+
+    // Get the latest quarter's SHAP values
+    const quarters = Object.keys(firmData).sort();
+    const latest = firmData[quarters[quarters.length - 1]];
+    if (!latest || !latest.shap) {
+      el.innerHTML = '<li style="color:var(--text-dim)">No SHAP data for latest quarter</li>';
+      return;
+    }
+
+    const shap = latest.shap;
+    const sorted = Object.entries(shap)
+      .filter(([k, v]) => v !== 0)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, 5);
+
+    sorted.forEach(([feat, val]) => {
+      const li = document.createElement('li');
+      const arrow = val > 0 ? '🔺' : '🔽';
+      const direction = val > 0 ? 'Pushing risk up' : 'Protecting margins';
+      const label = featureLabels[feat] || feat;
+      li.innerHTML = `<span class="driver-arrow">${arrow}</span> <strong>${label}</strong> — ${direction}`;
+      el.appendChild(li);
+    });
+  }
+
+  /* ─── SPARKLINE ───────────────────────────────────────── */
+  function renderSparkline(quarters, canvasId) {
+    const canvasEl = document.getElementById(canvasId);
+    if (!canvasEl) return;
+    if (canvasEl._chart) return; // already rendered
+
+    // Subsample if too many points
+    let data = quarters;
+    if (data.length > 40) {
+      const step = Math.ceil(data.length / 40);
+      data = data.filter((_, i) => i % step === 0);
+    }
+
+    const chart = new Chart(canvasEl, {
+      type: 'line',
+      data: {
+        labels: data.map(d => d.q.substring(0, 7)),
+        datasets: [{
+          data: data.map(d => d.mss),
+          borderColor: '#0fd99c',
+          backgroundColor: 'rgba(15, 217, 156, 0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: {
+          x: { display: false },
+          y: {
+            display: true,
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#4a5a70', font: { size: 10 } },
+            min: 15,
+            max: 55
+          }
+        }
+      }
+    });
+    canvasEl._chart = chart;
+  }
+
+  /* ─── SECTORS ─────────────────────────────────────────── */
+  function renderSectors(sectors) {
+    const sorted = sectors.sort((a, b) => b.mean_mss - a.mean_mss);
+    const maxMss = sorted[0].mean_mss;
+    const container = document.getElementById('sector-bars');
+    container.innerHTML = '';
+
+    sorted.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'sector-bar-row';
+      row.innerHTML = `
+        <div class="sector-name">${s.sector}</div>
+        <div class="bar-track">
+          <div class="bar-fill" data-swidth="${(s.mean_mss / maxMss) * 100}"
+               style="background: ${mssColor(s.mean_mss)};">
+            ${s.top_risk_firm}
+          </div>
+        </div>
+        <div class="bar-value" style="color: ${mssColor(s.mean_mss)}">${s.mean_mss.toFixed(1)}</div>
+      `;
+      container.appendChild(row);
+    });
+
+    // Animate on scroll
+    ScrollTrigger.create({
+      trigger: '#sector-bars',
+      start: 'top 70%',
+      once: true,
+      onEnter: () => {
+        document.querySelectorAll('.bar-fill[data-swidth]').forEach((el, i) => {
+          gsap.to(el, {
+            width: el.dataset.swidth + '%',
+            duration: 1.2,
+            delay: i * 0.06,
+            ease: 'power2.out'
+          });
+        });
+        gsap.from('.sector-bar-row', {
+          opacity: 0, x: -15, duration: 0.4, stagger: 0.05, ease: 'power2.out'
+        });
+      }
+    });
+
+    // Callouts
+    const callouts = document.getElementById('sector-callouts');
+    const stories = [
+      { title: '🛢️ Oil & Gas: Highest Risk',
+        desc: 'Crude prices are global; Indian fuel prices are partly regulated. ONGC can\'t always pass on cost increases, making it the most exposed sector.' },
+      { title: '💻 IT Services: Lowest Risk',
+        desc: 'Companies like Infosys and TCS have almost no raw material costs. Their biggest expense is salaries — which don\'t spike with commodity inflation.' },
+      { title: '🏗️ Steel & Mining: The Middle Ground',
+        desc: 'Tata Steel and Sesa Goa face volatile ore prices, but global steel demand gives them some pricing power. Risk depends on the commodity cycle.' }
     ];
+    stories.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'card sector-callout anim-fade';
+      card.innerHTML = `<div class="sc-title">${s.title}</div><div class="sc-desc">${s.desc}</div>`;
+      callouts.appendChild(card);
+    });
 
-    const FEATURE_LABELS = {
-      CPR: "Cost pass-through ratio",
-      ICSI: "Input cost sensitivity",
-      IBD: "Inventory buffer days",
-      WCSS: "Working-capital stress",
-      OL: "Operating leverage",
-      SIB: "Sector index beta",
-      rm_pct_of_sales: "Raw material % sales",
-      EBITDA_margin_pct: "EBITDA margin %",
-      margin_lag_1: "Margin lag 1Q",
-      margin_change_4q: "Margin change 4Q",
-      CPR_x_ICSI: "CPR x ICSI interaction"
-    };
-
-    const SECTION_SHORTCUTS = {
-      "1": "overview-section",
-      "2": "firms-section",
-      "3": "sectors-section",
-      "4": "model-section",
-      "5": "methodology-section"
-    };
-
-    const state = {
-      predictions: [],
-      drivers: {},
-      metrics: {},
-      sectorSummary: [],
-      pass1Recovery: [],
-      firmRowsByCode: new Map(),
-      firmEntries: [],
-      selectedFirmCode: null,
-      selectedDriverQuarter: null,
-      trajectoryMode: "both",
-      activeTab: "trajectoryTab",
-      filters: {
-        risk: "all",
-        sector: null,
-        search: ""
-      },
-      sort: {
-        key: "mss",
-        dir: "desc"
-      },
-      charts: {
-        trajectory: null,
-        drivers: null,
-        sector: null,
-        aucSpark: null
-      },
-      activeSection: "overview-section",
-      reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    };
-
-    function showError(msg) {
-      const banner = document.getElementById("errorBanner");
-      banner.style.display = "block";
-      banner.textContent = banner.textContent ? `${banner.textContent} | ${msg}` : msg;
-    }
-
-    function clearError() {
-      const banner = document.getElementById("errorBanner");
-      banner.style.display = "none";
-      banner.textContent = "";
-    }
-
-    function destroyChart(chart) {
-      if (chart && typeof chart.destroy === "function") chart.destroy();
-    }
-
-    function toNumber(value) {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : null;
-    }
-
-    function formatQuarter(isoDate) {
-      const d = new Date(`${isoDate}T00:00:00`);
-      const q = Math.floor(d.getMonth() / 3) + 1;
-      return `${d.getFullYear() + 10}-Q${q}`;
-    }
-
-    function riskBandFromScore(score) {
-      if (score < 40) return "Low";
-      if (score < 70) return "Moderate";
-      return "High";
-    }
-
-    function riskClassFromBand(band) {
-      if (band === "Low") return "pill-risk-low";
-      if (band === "Moderate") return "pill-risk-moderate";
-      return "pill-risk-high";
-    }
-
-    function confidenceClass(conf) {
-      return String(conf).toLowerCase() === "medium" ? "pill-confidence-medium" : "pill-confidence-low";
-    }
-
-    function confidenceLabel(conf) {
-      const c = String(conf).toLowerCase();
-      if (c === "high") return "Full data";
-      if (c === "medium") return "Most data";
-      return "Partial data";
-    }
-
-    function formatValue(value, digits = 1) {
-      const n = toNumber(value);
-      return n == null ? "--" : n.toFixed(digits);
-    }
-
-    function formatFeatureValue(value) {
-      if (value === null || value === undefined || String(value).toLowerCase() === "nan") return "—";
-      if (typeof value === "number") return Number.isFinite(value) ? value.toFixed(2) : "—";
-      const n = Number(value);
-      if (Number.isFinite(n)) return n.toFixed(2);
-      return String(value);
-    }
-
-    function getRiskArrow(delta) {
-      if (delta === null) return "–";
-      if (delta > 0) return "▲";
-      if (delta < 0) return "▼";
-      return "•";
-    }
-
-    function getRecommendation(riskBand) {
-      if (riskBand === "High") {
-        return "Recommended action: escalate pricing and procurement review; validate hedge and contract pass-through assumptions.";
-      }
-      if (riskBand === "Moderate") {
-        return "Recommended action: monitor input-cost trend and margin momentum; prepare selective repricing in vulnerable product lines.";
-      }
-      return "Recommended action: maintain current operating stance and monitor for early pass-through deterioration.";
-    }
-
-    function sortByQuarter(rows) {
-      return [...rows].sort((a, b) => a.quarter.localeCompare(b.quarter));
-    }
-
-    function getLatestQuarterGlobal() {
-      if (!state.predictions.length) return null;
-      return state.predictions.reduce((maxQ, row) => (row.quarter > maxQ ? row.quarter : maxQ), state.predictions[0].quarter);
-    }
-
-    function parseData() {
-      const grouped = new Map();
-      for (const row of state.predictions) {
-        const code = String(row.co_code);
-        if (!grouped.has(code)) grouped.set(code, []);
-        grouped.get(code).push(row);
-      }
-
-      const entries = [];
-      const nameCount = {};
-      grouped.forEach((rows, code) => {
-        const ordered = sortByQuarter(rows);
-        grouped.set(code, ordered);
-        const name = (ordered[0].short_name && String(ordered[0].short_name).trim()) || `FIRM_${code}`;
-        nameCount[name] = (nameCount[name] || 0) + 1;
-        entries.push({
-          code,
-          name,
-          sector: ordered[0].sector || "Unknown"
-        });
+    // Re-register the new anim-fade elements
+    gsap.utils.toArray('#sector-callouts .anim-fade').forEach(el => {
+      gsap.to(el, {
+        opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true }
       });
+    });
+  }
 
-      entries.forEach((entry) => {
-        entry.label = nameCount[entry.name] > 1 ? `${entry.name} (${entry.code})` : entry.name;
-      });
-      entries.sort((a, b) => a.label.localeCompare(b.label));
-
-      state.firmRowsByCode = grouped;
-      state.firmEntries = entries;
-
-      const defaultFirm = entries.find((x) => x.name === "TATA STEEL") || entries[0];
-      state.selectedFirmCode = defaultFirm ? defaultFirm.code : null;
-    }
-
-    function getLatestRowForFirm(code) {
-      const rows = state.firmRowsByCode.get(String(code)) || [];
-      return rows.length ? rows[rows.length - 1] : null;
-    }
-
-    function getQuarterBeforeLatest(rows) {
-      return rows.length >= 2 ? rows[rows.length - 2] : null;
-    }
-
-    function getLeaderboardRows() {
-      const rows = [];
-      for (const entry of state.firmEntries) {
-        const series = state.firmRowsByCode.get(entry.code) || [];
-        if (!series.length) continue;
-        const latest = series[series.length - 1];
-        const prev = series.length > 1 ? series[series.length - 2] : null;
-        const mss = toNumber(latest.mss) ?? 0;
-        const prevMss = prev ? toNumber(prev.mss) : null;
-        const delta = prevMss == null ? null : mss - prevMss;
-        const band = riskBandFromScore(mss);
-        rows.push({
-          code: entry.code,
-          name: entry.name,
-          label: entry.label,
-          sector: latest.sector || entry.sector || "Unknown",
-          mss,
-          band,
-          confidence: latest.confidence || "low",
-          delta,
-          seriesMss: series.map((x) => toNumber(x.mss) ?? 0),
-          latestQuarter: latest.quarter
-        });
+  /* ─── MODEL CARD UPDATE (from metrics.json) ───────────── */
+  function updateModelCard(metrics) {
+    // Update confusion matrix from actual data
+    if (metrics.confusion_matrix) {
+      const cm = metrics.confusion_matrix; // [[TN, FP], [FN, TP]]
+      const cells = document.querySelectorAll('.cg-cell .cg-num');
+      if (cells.length === 4) {
+        cells[0].dataset.count = cm[0][0]; // TN
+        cells[1].dataset.count = cm[0][1]; // FP
+        cells[2].dataset.count = cm[1][0]; // FN
+        cells[3].dataset.count = cm[1][1]; // TP
       }
-      return rows;
     }
 
-    function applyLeaderboardFilters(rows) {
-      const riskFilter = state.filters.risk;
-      const sectorFilter = state.filters.sector;
-      const search = state.filters.search.trim().toLowerCase();
-
-      return rows.filter((row) => {
-        if (riskFilter !== "all" && row.band.toLowerCase() !== riskFilter) return false;
-        if (sectorFilter && row.sector !== sectorFilter) return false;
-        if (search) {
-          const hay = `${row.name} ${row.sector} ${row.code}`.toLowerCase();
-          if (!hay.includes(search)) return false;
+    // Update AUC stat
+    if (metrics.overall) {
+      const aucEl = document.querySelector('.model-stat-card:first-child .ms-value');
+      if (aucEl) {
+        const auc = (metrics.overall.auc_roc_ensemble * 100);
+        aucEl.dataset.count = auc.toFixed(1);
+      }
+      // Update baseline lift
+      if (metrics.baseline_auc) {
+        const liftEl = document.querySelectorAll('.model-stat-card .ms-value')[1];
+        if (liftEl) {
+          const lift = ((metrics.overall.auc_roc_ensemble - metrics.baseline_auc) * 100);
+          liftEl.dataset.count = lift.toFixed(0);
         }
-        return true;
-      });
-    }
-
-    function compareValues(a, b, key) {
-      if (key === "firm") return a.name.localeCompare(b.name);
-      if (key === "sector") return a.sector.localeCompare(b.sector);
-      if (key === "mss") return a.mss - b.mss;
-      if (key === "band") return a.band.localeCompare(b.band);
-      if (key === "confidence") return String(a.confidence).localeCompare(String(b.confidence));
-      if (key === "delta") return (a.delta ?? -999) - (b.delta ?? -999);
-      return 0;
-    }
-
-    function sortLeaderboardRows(rows) {
-      const { key, dir } = state.sort;
-      const sorted = [...rows].sort((a, b) => compareValues(a, b, key));
-      if (dir === "desc") sorted.reverse();
-      return sorted;
-    }
-
-    function rankClass(rank) {
-      if (rank <= 5) return "rank-high";
-      if (rank <= 15) return "rank-mid";
-      return "rank-low";
-    }
-
-    function sparklineSvg(values, lastColor) {
-      if (!values || values.length === 0) return "";
-      const width = 46;
-      const height = 20;
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = max - min || 1;
-      const xStep = width / Math.max(1, values.length - 1);
-      const points = values.map((v, i) => {
-        const x = i * xStep;
-        const y = height - ((v - min) / range) * (height - 2) - 1;
-        return [x.toFixed(2), y.toFixed(2)];
-      });
-      const path = points.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" ");
-      const last = points[points.length - 1];
-      return `
-        <svg class="sparkline" viewBox="0 0 ${width} ${height}" aria-hidden="true">
-          <path d="${path}" fill="none" stroke="#7a8da8" stroke-width="1.6"></path>
-          <circle cx="${last[0]}" cy="${last[1]}" r="2.2" fill="${lastColor}"></circle>
-        </svg>
-      `;
-    }
-
-    function leaderboardCounts(rows) {
-      const counts = { all: rows.length, high: 0, moderate: 0, low: 0 };
-      rows.forEach((r) => {
-        const band = r.band.toLowerCase();
-        if (counts[band] != null) counts[band] += 1;
-      });
-      return counts;
-    }
-
-    function renderRiskFilterChips(baseRows) {
-      const counts = leaderboardCounts(baseRows);
-      const wrap = document.getElementById("riskFilterChips");
-      wrap.innerHTML = "";
-
-      const defs = [
-        { key: "all", label: `All (${counts.all})` },
-        { key: "high", label: `High risk (${counts.high})` },
-        { key: "moderate", label: `Moderate (${counts.moderate})` },
-        { key: "low", label: `Low (${counts.low})` }
-      ];
-
-      defs.forEach((d) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `filter-chip ${state.filters.risk === d.key ? "active" : ""}`;
-        btn.textContent = d.label;
-        btn.dataset.risk = d.key;
-        wrap.appendChild(btn);
-      });
-    }
-
-    function renderEmptyLeaderboard(message) {
-      const tbody = document.getElementById("leaderboardBody");
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="9">
-            <div class="empty-state">
-              <svg class="empty-icon" viewBox="0 0 48 48">
-                <circle cx="24" cy="24" r="22" fill="#edf3fb" stroke="#d5e2f4"></circle>
-                <path d="M16 20h16M16 26h10" stroke="#7a8da8" stroke-width="2" stroke-linecap="round"></path>
-              </svg>
-              <div>${message}</div>
-              <button id="resetFiltersBtn" class="ghost-btn" style="margin-top:10px;">Clear filter</button>
-            </div>
-          </td>
-        </tr>
-      `;
-      const btn = document.getElementById("resetFiltersBtn");
-      if (btn) {
-        btn.addEventListener("click", () => {
-          state.filters.risk = "all";
-          state.filters.sector = null;
-          state.filters.search = "";
-          document.getElementById("topSearch").value = "";
-          renderLeaderboard();
-        });
+      }
+      // Update test count
+      const nEl = document.querySelectorAll('.model-stat-card .ms-value')[2];
+      if (nEl && metrics.overall.n_test) {
+        nEl.dataset.count = metrics.overall.n_test;
       }
     }
+  }
 
-    function renderLeaderboard() {
-      const allRows = getLeaderboardRows();
-      renderRiskFilterChips(allRows);
+  /* ─── INIT ────────────────────────────────────────────── */
+  loadData();
 
-      const filtered = applyLeaderboardFilters(allRows);
-      const sorted = sortLeaderboardRows(filtered);
-      const tbody = document.getElementById("leaderboardBody");
-      const context = document.getElementById("leaderboardContext");
-      const sortText = `Sorted by ${state.sort.key.toUpperCase()} (${state.sort.dir}).`;
-      const sectorText = state.filters.sector ? ` Sector filter: ${state.filters.sector}.` : "";
-      const searchText = state.filters.search ? ` Search: "${state.filters.search}".` : "";
-      context.textContent = sortText + sectorText + searchText;
-
-      if (!sorted.length) {
-        renderEmptyLeaderboard("No firms match the current filter.");
-        return;
-      }
-
-      tbody.innerHTML = "";
-      sorted.forEach((row, idx) => {
-        const rank = idx + 1;
-        const bandClass = riskClassFromBand(row.band);
-        const confidence = String(row.confidence || "low");
-        const confClass = confidenceClass(confidence);
-        const delta = row.delta;
-        const deltaClass = delta == null ? "" : (delta > 0 ? "risk-up" : delta < 0 ? "risk-down" : "");
-        const deltaText = delta == null ? "–" : `${getRiskArrow(delta)} ${Math.abs(delta).toFixed(1)} pp`;
-        const spark = sparklineSvg(
-          row.seriesMss,
-          row.band === "High" ? COLORS.red : row.band === "Moderate" ? COLORS.amber : COLORS.teal
-        );
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><span class="rank-badge ${rankClass(rank)}">${rank}</span></td>
-          <td>
-            <div class="firm-cell">
-              <span class="firm-name">${row.name}</span>
-              <span class="pill ${bandClass}">${row.band}</span>
-            </div>
-          </td>
-          <td>${row.sector}</td>
-          <td class="num">${row.mss.toFixed(1)}</td>
-          <td><span class="pill ${bandClass}">${row.band}</span></td>
-          <td>${spark}</td>
-          <td><span class="pill ${confClass}">${confidenceLabel(confidence)}</span></td>
-          <td class="num"><span class="delta ${deltaClass}">${deltaText}</span></td>
-          <td><button type="button" class="ghost-btn leaderboard-view-btn" data-code="${row.code}">View</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function getDriverEntry(code, quarter) {
-      const codeKey = String(code);
-      if (!state.drivers[codeKey]) return null;
-      return state.drivers[codeKey][quarter] || null;
-    }
-
-    function getAvailableDriverQuarters(code) {
-      const obj = state.drivers[String(code)] || {};
-      return Object.keys(obj).sort();
-    }
-
-    function renderFirmSelect() {
-      const select = document.getElementById("firmSelect");
-      select.innerHTML = "";
-      state.firmEntries.forEach((entry) => {
-        const opt = document.createElement("option");
-        opt.value = entry.code;
-        opt.textContent = entry.label;
-        select.appendChild(opt);
-      });
-      if (state.selectedFirmCode) select.value = state.selectedFirmCode;
-    }
-
-    function updateGauge(latestRow) {
-      const score = toNumber(latestRow.mss) ?? 0;
-      const angle = -90 + (Math.max(0, Math.min(100, score)) / 100) * 180;
-      document.getElementById("gaugeNeedle").setAttribute("transform", `rotate(${angle} 160 160)`);
-      document.getElementById("gaugeScore").textContent = score.toFixed(1);
-      document.getElementById("gaugeQuarter").textContent = `Latest quarter: ${formatQuarter(latestRow.quarter)}`;
-
-      const band = riskBandFromScore(score);
-      const pill = document.getElementById("gaugeRiskPill");
-      pill.className = `pill ${riskClassFromBand(band)}`;
-      pill.textContent = `Risk: ${band}`;
-    }
-
-    function renderSimilarFirms(currentCode, sector) {
-      const target = document.getElementById("similarFirms");
-      const peers = state.firmEntries.filter((f) => f.code !== String(currentCode) && f.sector === sector).slice(0, 4);
-      if (!peers.length) {
-        target.textContent = "";
-        return;
-      }
-
-      const frag = document.createDocumentFragment();
-      const prefix = document.createElement("span");
-      prefix.textContent = "View similar firms: ";
-      frag.appendChild(prefix);
-      peers.forEach((p) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = p.name;
-        btn.dataset.similarCode = p.code;
-        frag.appendChild(btn);
-      });
-      target.innerHTML = "";
-      target.appendChild(frag);
-    }
-
-    function updateExplorerIdentity(code, latestRow, rows) {
-      const name = (latestRow.short_name && String(latestRow.short_name).trim()) || `FIRM_${code}`;
-      const sector = latestRow.sector || "Unknown";
-      document.getElementById("identityName").textContent = name;
-      document.getElementById("identitySector").textContent = sector;
-      document.getElementById("identityCode").textContent = `co_code: ${code}`;
-      const avatarEl = document.getElementById("identityAvatar");
-const domain = FIRM_DOMAINS[String(code)] || null;
-if (domain) {
-       const img = document.createElement("img");
-     img.src = `https://img.logo.dev/${domain}?token=pk_free`;
-     img.alt = name;
-     let fallbackStage = 0;
-     img.onerror = () => {
-       fallbackStage++;
-       if (fallbackStage === 1) {
-         img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-       } else {
-         avatarEl.innerHTML = "";
-         avatarEl.textContent = name[0] || "?";
-       }
-     };
-     avatarEl.innerHTML = "";
-     avatarEl.appendChild(img);
-} else {
-  avatarEl.textContent = name[0] || "?";
-}
-
-      const band = riskBandFromScore(toNumber(latestRow.mss) ?? 0);
-      document.getElementById("recommendedAction").textContent = getRecommendation(band);
-      renderSimilarFirms(code, sector);
-      updateDriverExplanation(code, latestRow.quarter);
-
-      const margin = latestRow.actual_margin_pct == null ? "--" : `${toNumber(latestRow.actual_margin_pct).toFixed(2)}%`;
-      document.getElementById("factMargin").textContent = margin;
-
-      const conf = String(latestRow.confidence || "low");
-      document.getElementById("factConfidence").innerHTML = `<span class="pill ${confidenceClass(conf)}">${confidenceLabel(conf)}</span>`;
-
-      const basis = String(latestRow.data_basis || "standalone");
-      const basisLabel = basis[0].toUpperCase() + basis.slice(1);
-      document.getElementById("factBasis").innerHTML = `<span class="pill pill-basis"><span class="basis-dot"></span>${basisLabel}</span>`;
-
-      const pred = latestRow.label_predicted;
-      const actual = latestRow.label_actual;
-      if (pred == null || actual == null) {
-        document.getElementById("factOutcome").textContent = "Not available";
-      } else {
-        const ok = Number(pred) === Number(actual);
-        const label = ok ? "Correct" : "Missed";
-        const clazz = ok ? "pill-outcome-ok" : "pill-outcome-missed";
-        document.getElementById("factOutcome").innerHTML = `
-          <span class="pill ${clazz}">
-            ${ok ? "✓" : "✕"} ${label} (Pred ${pred} vs Actual ${actual})
-          </span>
-        `;
-      }
-    }
-
-    function renderTrajectoryChart(rows) {
-      destroyChart(state.charts.trajectory);
-      const ctx = document.getElementById("trajectoryChart");
-      const labels = rows.map((r) => formatQuarter(r.quarter));
-      const mss = rows.map((r) => toNumber(r.mss));
-      const margins = rows.map((r) => toNumber(r.actual_margin_pct));
-
-      state.charts.trajectory = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "MSS",
-              data: mss,
-              borderColor: COLORS.blue,
-              backgroundColor: "rgba(29,111,206,0.14)",
-              borderWidth: 2.3,
-              pointRadius: 2.5,
-              pointHoverRadius: 4,
-              tension: 0.25,
-              yAxisID: "y"
-            },
-            {
-              label: "Actual EBITDA margin %",
-              data: margins,
-              borderColor: COLORS.navy,
-              backgroundColor: "rgba(15,45,82,0.12)",
-              borderWidth: 2,
-              borderDash: [6, 4],
-              pointRadius: 2.2,
-              pointHoverRadius: 4,
-              tension: 0.22,
-              yAxisID: "y1"
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: {
-              labels: {
-                color: COLORS.ink,
-                boxWidth: 12,
-                font: { family: "Plus Jakarta Sans", size: 12, weight: "500" }
-              }
-            },
-            title: {
-              display: true,
-              text: "MSS vs actual margin over test period",
-              color: COLORS.navy,
-              font: { family: "Plus Jakarta Sans", size: 13, weight: "600" }
-            },
-            tooltip: {
-              backgroundColor: "#ffffff",
-              borderColor: "#dce5f2",
-              borderWidth: 1,
-              titleColor: COLORS.ink,
-              bodyColor: COLORS.ink
-            }
-          },
-          scales: {
-            x: {
-              ticks: { color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { color: COLORS.grid },
-              title: { display: true, text: "Quarter", color: COLORS.muted, font: { size: 12, family: "Plus Jakarta Sans" } }
-            },
-            y: {
-              min: 0,
-              max: 100,
-              ticks: { color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { color: COLORS.grid },
-              title: { display: true, text: "MSS (0-100)", color: COLORS.muted, font: { size: 12, family: "Plus Jakarta Sans" } }
-            },
-            y1: {
-              position: "right",
-              ticks: { color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { drawOnChartArea: false },
-              title: { display: true, text: "EBITDA margin %", color: COLORS.muted, font: { size: 12, family: "Plus Jakarta Sans" } }
-            }
-          }
-        }
-      });
-      applyTrajectoryMode();
-    }
-
-    function applyTrajectoryMode() {
-      if (!state.charts.trajectory) return;
-      const mode = state.trajectoryMode;
-      state.charts.trajectory.data.datasets[0].hidden = mode === "margin";
-      state.charts.trajectory.data.datasets[1].hidden = mode === "mss";
-      state.charts.trajectory.update();
-    }
-
-    function renderDrivers(code, quarterCandidate) {
-      const wrap = document.getElementById("driversChartWrap");
-      const quarterWrap = document.getElementById("driverQuarterSelectWrap");
-      const quarterSelect = document.getElementById("driverQuarterSelect");
-      const available = getAvailableDriverQuarters(code);
-
-      if (!available.length) {
-        destroyChart(state.charts.drivers);
-        wrap.innerHTML = `
-          <div class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="22" fill="#edf3fb" stroke="#d5e2f4"></circle>
-              <path d="M17 24h14M24 17v14" stroke="#7a8da8" stroke-width="2" stroke-linecap="round"></path>
-            </svg>
-            Driver data is not available for this firm-quarter.
-          </div>
-        `;
-        quarterWrap.style.display = "none";
-        return { topDriversText: "Driver data not available for this firm." };
-      }
-
-      quarterSelect.innerHTML = "";
-      available.forEach((q) => {
-        const opt = document.createElement("option");
-        opt.value = q;
-        opt.textContent = formatQuarter(q);
-        quarterSelect.appendChild(opt);
-      });
-
-      let quarter = quarterCandidate && available.includes(quarterCandidate) ? quarterCandidate : available[available.length - 1];
-      let entry = getDriverEntry(code, quarter);
-      if (!entry && available.length) {
-        quarter = available[available.length - 1];
-        entry = getDriverEntry(code, quarter);
-      }
-
-      state.selectedDriverQuarter = quarter;
-      quarterSelect.value = quarter;
-      quarterWrap.style.display = "flex";
-
-      if (!entry || !entry.features || !entry.shap) {
-        destroyChart(state.charts.drivers);
-        wrap.innerHTML = `
-          <div class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="22" fill="#edf3fb" stroke="#d5e2f4"></circle>
-              <path d="M16 20h16M16 28h7" stroke="#7a8da8" stroke-width="2" stroke-linecap="round"></path>
-            </svg>
-            Driver data is not available for this quarter. Earlier quarters may have data.
-          </div>
-        `;
-        return { topDriversText: "Driver data not available for this quarter." };
-      }
-
-      if (!document.getElementById("driversChart")) {
-        wrap.innerHTML = '<canvas id="driversChart"></canvas>';
-      }
-
-      const bars = [];
-      INTERPRETABLE_FEATURES.forEach((feature) => {
-        const shap = toNumber(entry.shap[feature]);
-        if (shap == null || shap === 0) return;
-        bars.push({
-          feature,
-          raw: entry.features[feature],
-          shap,
-          abs: Math.abs(shap)
-        });
-      });
-
-      bars.sort((a, b) => b.abs - a.abs);
-      const top = bars.slice(0, 5);
-
-      if (!top.length) {
-        destroyChart(state.charts.drivers);
-        wrap.innerHTML = `
-          <div class="empty-state">
-            <svg class="empty-icon" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="22" fill="#edf3fb" stroke="#d5e2f4"></circle>
-              <path d="M16 24h16" stroke="#7a8da8" stroke-width="2" stroke-linecap="round"></path>
-            </svg>
-            Driver data not available for this firm-quarter.
-          </div>
-        `;
-        return { topDriversText: "Top interpretable drivers are unavailable." };
-      }
-
-      destroyChart(state.charts.drivers);
-      const ctx = document.getElementById("driversChart");
-      const labels = top.map((t) => {
-        const title = FEATURE_LABELS[t.feature] || t.feature;
-        const raw = formatFeatureValue(t.raw);
-        const signVal = `${t.shap >= 0 ? "+" : ""}${t.shap.toFixed(2)}`;
-        return `${title} (${raw}): ${signVal}`;
-      });
-      const data = top.map((t) => t.shap);
-      const colors = top.map((t) => (t.shap >= 0 ? (Math.abs(t.shap) > 0.3 ? COLORS.red : COLORS.amber) : COLORS.teal));
-
-      state.charts.drivers = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [
-            {
-              data,
-              backgroundColor: colors,
-              borderRadius: 7,
-              borderSkipped: false
-            }
-          ]
-        },
-        options: {
-          indexAxis: "y",
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: `Top drivers - ${formatQuarter(quarter)}`,
-              color: COLORS.navy,
-              font: { family: "Plus Jakarta Sans", size: 13, weight: "600" }
-            },
-            tooltip: {
-              backgroundColor: "#ffffff",
-              borderColor: "#dce5f2",
-              borderWidth: 1,
-              titleColor: COLORS.ink,
-              bodyColor: COLORS.ink
-            }
-          },
-          scales: {
-            x: {
-              ticks: { color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { color: COLORS.grid },
-              title: { display: true, text: "SHAP value", color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 12 } }
-            },
-            y: {
-              ticks: { color: COLORS.ink, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { display: false }
-            }
-          }
-        }
-      });
-
-      const topDriverNames = top.slice(0, 2).map((t) => FEATURE_LABELS[t.feature] || t.feature);
-      return {
-        topDriversText: `Latest quarter drivers are led by ${topDriverNames.join(" and ")}.`
-      };
-    }
-
-    function renderDetailsTable(code, quarter) {
-      const tbody = document.getElementById("detailsTableBody");
-      const entry = getDriverEntry(code, quarter);
-      tbody.innerHTML = "";
-
-      if (!entry || !entry.features || !entry.shap) {
-        tbody.innerHTML = '<tr><td colspan="3" class="details-muted">Feature-level details are not available for this quarter.</td></tr>';
-        return;
-      }
-
-      const keys = Object.keys(entry.features);
-      keys.forEach((feature) => {
-        const raw = formatFeatureValue(entry.features[feature]);
-        const shap = toNumber(entry.shap[feature]);
-        const shapText = shap == null ? "—" : shap.toFixed(3);
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${feature}</td>
-          <td>${raw}</td>
-          <td>${shapText}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function setActiveTab(tabId) {
-      state.activeTab = tabId;
-      document.querySelectorAll(".tab-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.tab === tabId);
-      });
-      document.querySelectorAll(".tab-pane").forEach((pane) => {
-        pane.classList.toggle("active", pane.id === tabId);
-      });
-    }
-
-    function updateExplorer(code, opts = {}) {
-      const rows = state.firmRowsByCode.get(String(code)) || [];
-      if (!rows.length) return;
-      const latest = rows[rows.length - 1];
-      state.selectedFirmCode = String(code);
-
-      const cross = document.getElementById("explorerCrossfade");
-      if (!opts.skipFade && !state.reducedMotion) cross.classList.add("fading");
-
-      const apply = () => {
-        updateGauge(latest);
-        updateExplorerIdentity(code, latest, rows);
-        renderTrajectoryChart(rows);
-        const driverInfo = renderDrivers(code, latest.quarter);
-        renderDetailsTable(code, state.selectedDriverQuarter || latest.quarter);
-        updateQaSelectedDriver(driverInfo.topDriversText);
-        updateBreadcrumb();
-        const select = document.getElementById("firmSelect");
-        if (select.value !== String(code)) select.value = String(code);
-      };
-
-      if (!opts.skipFade && !state.reducedMotion) {
-        setTimeout(() => {
-          apply();
-          cross.classList.remove("fading");
-        }, 200);
-      } else {
-        apply();
-      }
-    }
-
-    function updateQaSelectedDriver(text) {
-      const el = document.getElementById("qaSelectedDrivers");
-      el.textContent = text || "Select a firm to inspect driver-level explanation.";
-    }
-
-    function renderSectorChart() {
-      destroyChart(state.charts.sector);
-      const ctx = document.getElementById("sectorChart");
-      const sorted = [...state.sectorSummary].sort((a, b) => Number(b.mean_mss) - Number(a.mean_mss));
-
-      const sectorValuePlugin = {
-        id: "sectorValuePlugin",
-        afterDatasetsDraw(chart) {
-          const { ctx: c, scales: { x, y } } = chart;
-          c.save();
-          c.textBaseline = "middle";
-          sorted.forEach((row, idx) => {
-            const xValue = Number(row.mean_mss);
-            const yPos = y.getPixelForValue(idx);
-            const barEnd = x.getPixelForValue(xValue);
-            const barStart = x.getPixelForValue(0);
-            const barWidth = barEnd - barStart;
-            const text = xValue.toFixed(1);
-            c.font = "bold 11px 'Plus Jakarta Sans'";
-            const textW = c.measureText(text).width;
-
-            if (xValue > 30 && barWidth > textW + 16) {
-              c.fillStyle = "#ffffff";
-              c.fillText(text, barEnd - textW - 10, yPos + 0.5);
-            } else {
-              c.fillStyle = COLORS.ink;
-              c.fillText(text, barEnd + 8, yPos + 0.5);
-            }
-          });
-          c.restore();
-        }
-      };
-
-      state.charts.sector = new Chart(ctx, {
-        type: "bar",
-        plugins: [sectorValuePlugin],
-        data: {
-          labels: sorted.map((s) => s.sector),
-          datasets: [
-            {
-              data: sorted.map((s) => Number(s.mean_mss)),
-              borderRadius: 8,
-              borderSkipped: false,
-              barPercentage: 0.72,
-              categoryPercentage: 0.82,
-              backgroundColor: sorted.map((s) => {
-                const mean = Number(s.mean_mss);
-                if (mean < 40) return COLORS.teal;
-                if (mean < 70) return COLORS.amber;
-                return COLORS.red;
-              })
-            }
-          ]
-        },
-        options: {
-          indexAxis: "y",
-          maintainAspectRatio: false,
-          layout: {
-            padding: { left: 0, right: 40 }
-          },
-          onClick: (_evt, elements) => {
-            if (!elements.length) return;
-            const idx = elements[0].index;
-            const sector = sorted[idx].sector;
-            state.filters.sector = sector;
-            scrollToSection("firms-section");
-            renderLeaderboard();
-          },
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: "Mean MSS by sector (latest quarter)",
-              color: COLORS.navy,
-              font: { family: "Plus Jakarta Sans", size: 13, weight: "600" }
-            },
-            tooltip: {
-              backgroundColor: "#ffffff",
-              borderColor: "#dce5f2",
-              borderWidth: 1,
-              titleColor: COLORS.ink,
-              bodyColor: COLORS.ink,
-              position: "nearest",
-              callbacks: {
-                label(ctx) {
-                  const row = sorted[ctx.dataIndex];
-                  const firmLabel = `${row.n_firms} firm${row.n_firms > 1 ? "s" : ""}`;
-                  if (row.n_firms === 1) return `${firmLabel}: ${row.top_risk_firm} (MSS ${Number(row.top_risk_mss).toFixed(1)})`;
-                  return `${firmLabel} \u00B7 Highest: ${row.top_risk_firm} (${Number(row.top_risk_mss).toFixed(1)}) \u00B7 Lowest: ${row.lowest_risk_firm} (${Number(row.lowest_risk_mss).toFixed(1)})`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              min: 0,
-              max: 100,
-              ticks: { color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 11 } },
-              grid: { color: COLORS.grid },
-              title: { display: true, text: "Mean MSS", color: COLORS.muted, font: { family: "Plus Jakarta Sans", size: 12 } }
-            },
-            y: {
-              ticks: {
-                color: COLORS.ink,
-                font: { family: "Plus Jakarta Sans", size: 11 },
-                autoSkip: false,
-                padding: 6
-              },
-              grid: { display: false },
-              afterFit(axis) {
-                axis.width = Math.max(axis.width, 200);
-              }
-            }
-          }
-        }
-      });
-
-      renderSectorSummary(sorted);
-    }
-
-    function renderSectorSummary(sorted) {
-      const totalSectors = sorted.length;
-      const highRisk = sorted.filter((s) => Number(s.mean_mss) >= 70).length;
-      const totalFirms = sorted.reduce((sum, s) => sum + (s.n_firms || 0), 0);
-      const top3 = sorted.slice(0, 3);
-
-      document.getElementById("sectorCountValue").textContent = totalSectors;
-      document.getElementById("sectorHighRiskValue").textContent = highRisk;
-      document.getElementById("sectorFirmCountValue").textContent = totalFirms;
-
-      const topList = document.getElementById("sectorTopList");
-      topList.innerHTML = "";
-      top3.forEach((s, i) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<span><span class="rank-num">${i + 1}.</span> ${s.sector}</span><span class="num" style="font-weight:600;">${Number(s.mean_mss).toFixed(1)}</span>`;
-        topList.appendChild(li);
-      });
-    }
-
-    const HUMANIZE_MAP = {
-      CPR: ["weak cost pass-through ability", "strong cost pass-through ability"],
-      ICSI: ["high input-cost sensitivity", "low input-cost sensitivity"],
-      IBD: ["thin inventory buffer", "healthy inventory buffer"],
-      WCSS: ["stretched working capital", "comfortable working capital"],
-      OL: ["high operating leverage", "low operating leverage"],
-      SIB: ["high sector inflation beta", "low sector inflation beta"],
-      EBITDA_margin_pct: ["current margin level", "current margin level"],
-      margin_lag_1: ["recent margin trend", "recent margin trend"],
-      margin_lag_2: ["two-quarter margin trend", "two-quarter margin trend"],
-      margin_lag_4: ["year-over-year margin level", "year-over-year margin level"],
-      margin_change_4q: ["year-over-year margin trajectory", "year-over-year margin trajectory"],
-      margin_std_4q: ["margin volatility", "margin stability"],
-      rm_pct_of_sales: ["raw material cost share of revenue", "low raw material cost share"],
-      rm_mix_drift_8q: ["raw material intensity drift", "stable raw material intensity"],
-      sector_relative_margin: ["margin vs. sector average", "margin vs. sector average"],
-      CPR_x_ICSI: ["combined pass-through and sensitivity exposure", "low combined pass-through exposure"]
-    };
-
-    function humanizeFeature(feature, shapValue) {
-      const map = HUMANIZE_MAP[feature];
-      if (!map) return feature;
-      return shapValue >= 0 ? map[0] : map[1];
-    }
-
-    function updateDriverExplanation(code, quarter) {
-      const body = document.getElementById("driverExplanationBody");
-      const entry = getDriverEntry(code, quarter);
-      const latest = getLatestRowForFirm(code);
-      if (!entry || !entry.shap || !latest) {
-        body.textContent = "Driver data not available for this firm.";
-        return;
-      }
-      const name = latest.short_name || "This firm";
-      const mss = toNumber(latest.mss) ?? 0;
-      const band = riskBandFromScore(mss);
-
-      const interpretable = Object.entries(entry.shap).filter(([k]) => INTERPRETABLE_FEATURES.includes(k));
-      const sorted = interpretable.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-      const topPositive = sorted.find(([, v]) => v > 0);
-      const topNegative = sorted.find(([, v]) => v < 0);
-
-      let text = `${name}'s score is primarily driven by `;
-      if (topPositive) text += humanizeFeature(topPositive[0], topPositive[1]);
-      else text += "no single dominant risk factor";
-      if (topNegative) text += `. Its strongest protective factor is ${humanizeFeature(topNegative[0], topNegative[1])}`;
-      text += ". ";
-
-      if (band === "High") text += "This combination warrants closer monitoring of pricing flexibility and inventory positioning.";
-      else if (band === "Moderate") text += "Watch for changes in input cost trends over the next 1-2 quarters.";
-      else text += "No immediate action required. Monitor at the standard quarterly cadence.";
-
-      body.textContent = text;
-    }
-
-    function renderHeatMap() {
-      const wrap = document.getElementById("heatmapWrap");
-      if (!wrap) return;
-      const quarters = [...new Set(state.predictions.map((r) => r.quarter))].sort();
-      const sectorSet = [...new Set(state.predictions.map((r) => r.sector))];
-      const sorted = [...state.sectorSummary].sort((a, b) => Number(b.mean_mss) - Number(a.mean_mss));
-      const sectorOrder = sorted.map((s) => s.sector);
-      const sectors = sectorOrder.filter((s) => sectorSet.includes(s));
-
-      const matrix = {};
-      for (const s of sectors) { matrix[s] = {}; }
-      for (const row of state.predictions) {
-        if (!matrix[row.sector]) continue;
-        if (!matrix[row.sector][row.quarter]) matrix[row.sector][row.quarter] = [];
-        matrix[row.sector][row.quarter].push(toNumber(row.mss) ?? 0);
-      }
-
-      const cols = quarters.length + 1;
-      let html = `<div class="heatmap-grid" style="grid-template-columns: 180px repeat(${quarters.length}, 1fr);">`;
-      html += `<div class="heatmap-header-cell"></div>`;
-      quarters.forEach((q) => { html += `<div class="heatmap-header-cell">${formatQuarter(q)}</div>`; });
-
-      sectors.forEach((sector) => {
-        html += `<div class="heatmap-label-cell">${sector}</div>`;
-        quarters.forEach((q) => {
-          const vals = matrix[sector][q];
-          if (!vals || !vals.length) {
-            html += `<div class="heatmap-cell no-data" title="${sector}, ${formatQuarter(q)}: No data">&nbsp;</div>`;
-          } else {
-            const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
-            let bg = COLORS.teal;
-            if (mean >= 70) bg = COLORS.red;
-            else if (mean >= 40) bg = COLORS.amber;
-            html += `<div class="heatmap-cell" style="background:${bg};" title="${sector}, ${formatQuarter(q)}: MSS ${Math.round(mean)} (${vals.length} firm${vals.length > 1 ? 's' : ''})">${Math.round(mean)}</div>`;
-          }
-        });
-      });
-      html += `</div>`;
-      wrap.innerHTML = html;
-    }
-
-    function setupSectorToggle() {
-      const toggle = document.getElementById("sectorToggle");
-      if (!toggle) return;
-      const saved = sessionStorage.getItem("sectorView");
-      if (saved === "heat") switchSectorView("heat");
-
-      toggle.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-view]");
-        if (!btn) return;
-        switchSectorView(btn.dataset.view);
-      });
-    }
-
-    function switchSectorView(view) {
-      const barCard = document.getElementById("sectorBarCard");
-      const heatCard = document.getElementById("sectorHeatCard");
-      const summaryPanel = document.getElementById("sectorSummaryPanel");
-      const btns = document.querySelectorAll("#sectorToggle button");
-      btns.forEach((b) => b.classList.toggle("active", b.dataset.view === view));
-
-      if (view === "heat") {
-        barCard.style.display = "none";
-        if (summaryPanel) summaryPanel.style.display = "none";
-        heatCard.style.display = "";
-        heatCard.style.gridColumn = "1 / -1";
-        renderHeatMap();
-        sessionStorage.setItem("sectorView", "heat");
-      } else {
-        barCard.style.display = "";
-        if (summaryPanel) summaryPanel.style.display = "";
-        heatCard.style.display = "none";
-        sessionStorage.setItem("sectorView", "bar");
-      }
-    }
-
-    function updateModelSection() {
-      // Model section is now static stakeholder content - no dynamic updates needed
-    }
-
-    function makeCounter(el, endValue, formatter) {
-      if (state.reducedMotion) {
-        el.textContent = formatter(endValue);
-        return;
-      }
-      const duration = 800;
-      const start = performance.now();
-      function step(now) {
-        const progress = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = endValue * eased;
-        el.textContent = formatter(current);
-        if (progress < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
-
-
-
-    function updateLastUpdatedChip() {
-      const latest = getLatestQuarterGlobal();
-      if (!latest) return;
-      document.getElementById("lastUpdatedChip").textContent = `Data current as of ${formatQuarter(latest)}`;
-    }
-
-    function updateKpis() {
-      const rows = getLeaderboardRows();
-      const firmCount = rows.length;
-      const highRisk = rows.filter((r) => r.mss >= 70).length;
-      const avgMss = firmCount ? rows.reduce((s, r) => s + r.mss, 0) / firmCount : 0;
-
-      makeCounter(document.getElementById("kpiCoverageValue"), firmCount, (v) => `${Math.round(v)}`);
-      makeCounter(document.getElementById("kpiHighRiskValue"), highRisk, (v) => `${Math.round(v)}`);
-      makeCounter(document.getElementById("kpiAvgMssValue"), avgMss, (v) => `${Math.round(v)}/100`);
-
-      updateInsightBanner(rows);
-    }
-
-    function updateInsightBanner(rows) {
-      const highRisk = rows.filter((r) => r.mss >= 70);
-      const lowRisk = rows.filter((r) => r.mss < 40);
-      const topFirm = highRisk.length ? highRisk.sort((a, b) => b.mss - a.mss)[0] : null;
-
-      if (topFirm) {
-        document.getElementById("insightHighRisk").innerHTML = `<strong>${highRisk.length} firm${highRisk.length > 1 ? "s are" : " is"} flagged as high risk</strong> for margin compression in the next two quarters. Top concern: <strong>${topFirm.name}</strong> in ${topFirm.sector}.`;
-      } else {
-        document.getElementById("insightHighRisk").textContent = "No firms are currently flagged as high risk.";
-      }
-
-      const topSector = state.sectorSummary.length ? [...state.sectorSummary].sort((a, b) => Number(b.mean_mss) - Number(a.mean_mss))[0] : null;
-      if (topSector) {
-        const topSectorFirm = topFirm && topFirm.sector === topSector.sector ? topFirm : rows.find((r) => r.sector === topSector.sector);
-        let driverText = "";
-        if (topSectorFirm) {
-          const entry = getDriverEntry(topSectorFirm.code, topSectorFirm.latestQuarter || getLatestRowForFirm(topSectorFirm.code)?.quarter);
-          if (entry && entry.shap) {
-            const topFeature = Object.entries(entry.shap).filter(([k]) => INTERPRETABLE_FEATURES.includes(k)).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
-            if (topFeature) driverText = `, driven primarily by ${humanizeFeature(topFeature[0], topFeature[1])}`;
-          }
-        }
-        document.getElementById("insightSector").innerHTML = `The most exposed sector is <strong>${topSector.sector}</strong>${driverText}.`;
-      }
-
-      document.getElementById("insightSafe").innerHTML = `<strong>${lowRisk.length} firm${lowRisk.length !== 1 ? "s" : ""} show${lowRisk.length === 1 ? "s" : ""} no immediate</strong> margin pressure signals.`;
-    }
-
-    function updateQaRiskConcentration() {
-      if (!state.sectorSummary.length) return;
-      const top = [...state.sectorSummary].sort((a, b) => Number(b.mean_mss) - Number(a.mean_mss)).slice(0, 3);
-      const sentence = top.map((x) => `${x.sector} (${Number(x.mean_mss).toFixed(1)})`).join(", ");
-      document.getElementById("qaRiskConcentration").textContent = `Current concentration is highest in ${sentence}.`;
-    }
-
-    function updateBreadcrumb() {
-      const active = state.activeSection;
-      const sectionName = {
-        "overview-section": "Overview",
-        "firms-section": "Firms",
-        "sectors-section": "Sectors",
-        "model-section": "Model",
-        "methodology-section": "Methodology"
-      }[active] || "Overview";
-
-      if (active === "firms-section" && state.selectedFirmCode) {
-        const latest = getLatestRowForFirm(state.selectedFirmCode);
-        const name = latest ? latest.short_name : "";
-        document.getElementById("breadcrumbText").textContent = name ? `Firms / ${name}` : "Firms";
-      } else {
-        document.getElementById("breadcrumbText").textContent = sectionName;
-      }
-    }
-
-    function setActiveNav(targetId) {
-      document.querySelectorAll(".nav-item").forEach((item) => {
-        item.classList.toggle("active", item.dataset.target === targetId);
-      });
-      state.activeSection = targetId;
-      updateBreadcrumb();
-    }
-
-    function scrollToSection(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.scrollIntoView({ behavior: state.reducedMotion ? "auto" : "smooth", block: "start" });
-      setActiveNav(id);
-    }
-
-    function setupScrollSpy() {
-      const sections = ["overview-section", "firms-section", "sectors-section", "model-section", "methodology-section"]
-        .map((id) => document.getElementById(id))
-        .filter(Boolean);
-      const visible = new Map();
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            visible.set(entry.target.id, entry.intersectionRatio);
-          } else {
-            visible.delete(entry.target.id);
-          }
-        });
-        if (visible.size) {
-          let bestId = null;
-          let bestRatio = -1;
-          visible.forEach((ratio, id) => {
-            if (ratio > bestRatio) {
-              bestRatio = ratio;
-              bestId = id;
-            }
-          });
-          if (bestId) setActiveNav(bestId);
-        }
-      }, {
-        root: null,
-        rootMargin: "-20% 0px -55% 0px",
-        threshold: [0, 0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1]
-      });
-
-      sections.forEach((section) => observer.observe(section));
-    }
-
-    function setupRevealAnimations() {
-      if (state.reducedMotion) {
-        document.querySelectorAll(".reveal").forEach((el) => el.classList.add("is-visible"));
-        return;
-      }
-      document.body.classList.add("motion-enabled");
-      const revealObs = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            revealObs.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.15 });
-      document.querySelectorAll(".reveal").forEach((el) => revealObs.observe(el));
-      setTimeout(() => {
-        document.querySelectorAll(".reveal:not(.is-visible)").forEach((el) => el.classList.add("is-visible"));
-      }, 1500);
-    }
-
-    function setupTopbarSearch() {
-      const input = document.getElementById("topSearch");
-      input.addEventListener("input", (e) => {
-        state.filters.search = e.target.value;
-        renderLeaderboard();
-      });
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          const search = e.target.value.trim().toLowerCase();
-          if (!search) return;
-          const match = state.firmEntries.find((f) => f.label.toLowerCase().includes(search) || f.name.toLowerCase().includes(search));
-          if (match) {
-            state.selectedFirmCode = match.code;
-            updateExplorer(match.code);
-            scrollToSection("firms-section");
-          }
-        }
-      });
-    }
-
-    function setupTableInteractions() {
-      document.getElementById("riskFilterChips").addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-risk]");
-        if (!btn) return;
-        state.filters.risk = btn.dataset.risk;
-        renderLeaderboard();
-      });
-
-      document.querySelector("#leaderboardTable thead").addEventListener("click", (e) => {
-        const th = e.target.closest("th.sortable");
-        if (!th) return;
-        const key = th.dataset.sortKey;
-        if (state.sort.key === key) {
-          state.sort.dir = state.sort.dir === "desc" ? "asc" : "desc";
-        } else {
-          state.sort.key = key;
-          state.sort.dir = key === "firm" || key === "sector" ? "asc" : "desc";
-        }
-        renderLeaderboard();
-      });
-
-      document.getElementById("leaderboardBody").addEventListener("click", (e) => {
-        const btn = e.target.closest(".leaderboard-view-btn");
-        if (!btn) return;
-        const code = btn.dataset.code;
-        updateExplorer(code);
-        scrollToSection("firms-section");
-      });
-    }
-
-    function setupExplorerEvents() {
-      document.getElementById("firmSelect").addEventListener("change", (e) => {
-        updateExplorer(e.target.value);
-      });
-
-      document.getElementById("similarFirms").addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-similar-code]");
-        if (!btn) return;
-        updateExplorer(btn.dataset.similarCode);
-      });
-
-      document.getElementById("explorerTabs").addEventListener("click", (e) => {
-        const btn = e.target.closest(".tab-btn");
-        if (!btn) return;
-        setActiveTab(btn.dataset.tab);
-      });
-
-      document.getElementById("trajectoryMode").addEventListener("click", (e) => {
-        const btn = e.target.closest(".segment-btn");
-        if (!btn) return;
-        state.trajectoryMode = btn.dataset.mode;
-        document.querySelectorAll(".segment-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === state.trajectoryMode));
-        applyTrajectoryMode();
-      });
-
-      document.getElementById("driverQuarterSelect").addEventListener("change", (e) => {
-        state.selectedDriverQuarter = e.target.value;
-        const info = renderDrivers(state.selectedFirmCode, state.selectedDriverQuarter);
-        renderDetailsTable(state.selectedFirmCode, state.selectedDriverQuarter);
-        updateQaSelectedDriver(info.topDriversText);
-      });
-    }
-
-    function setupSidebarAndTopbar() {
-      document.getElementById("sidebarToggle").addEventListener("click", () => {
-        document.body.classList.toggle("sidebar-collapsed");
-        const collapsed = document.body.classList.contains("sidebar-collapsed");
-        localStorage.setItem("inflation_shield_sidebar_collapsed", collapsed ? "1" : "0");
-      });
-
-      if (localStorage.getItem("inflation_shield_sidebar_collapsed") === "1") {
-        document.body.classList.add("sidebar-collapsed");
-      }
-
-      document.getElementById("sideNav").addEventListener("click", (e) => {
-        const btn = e.target.closest(".nav-item");
-        if (!btn) return;
-        scrollToSection(btn.dataset.target);
-        document.body.classList.remove("drawer-open");
-      });
-
-      document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-        document.body.classList.add("drawer-open");
-      });
-
-      document.getElementById("mobileOverlay").addEventListener("click", () => {
-        document.body.classList.remove("drawer-open");
-      });
-    }
-
-
-    async function fetchJson(name) {
-      const res = await fetch(name);
-      if (!res.ok) throw new Error(`${name} (${res.status})`);
-      return res.json();
-    }
-
-    async function init() {
-      clearError();
-
-      const files = [
-        "outputs/predictions.json",
-        "outputs/drivers.json",
-        "outputs/metrics.json",
-        "outputs/sector_summary.json",
-        "outputs/feature_list.json"
-      ];
-
-      const loaded = {};
-      await Promise.all(files.map(async (file) => {
-        try {
-          loaded[file] = await fetchJson(file);
-        } catch (err) {
-          showError(`Failed to load ${file}`);
-          console.error(err);
-        }
-      }));
-
-      if (!loaded["outputs/predictions.json"] ||
-          !loaded["outputs/drivers.json"] ||
-          !loaded["outputs/metrics.json"] ||
-          !loaded["outputs/sector_summary.json"] ||
-          !loaded["outputs/feature_list.json"]) {
-        return;
-      }
-
-      state.predictions = loaded["outputs/predictions.json"];
-      state.drivers = loaded["outputs/drivers.json"];
-      state.metrics = loaded["outputs/metrics.json"];
-      state.sectorSummary = loaded["outputs/sector_summary.json"];
-      state.pass1Recovery = loaded["outputs/feature_list.json"];
-
-      parseData();
-      renderFirmSelect();
-      updateKpis();
-      updateLastUpdatedChip();
-      updateModelSection();
-      updateQaRiskConcentration();
-      renderLeaderboard();
-      renderSectorChart();
-      updateExplorer(state.selectedFirmCode, { skipFade: true });
-      setupRevealAnimations();
-      setupScrollSpy();
-
-      setupSidebarAndTopbar();
-      setupTopbarSearch();
-      setupTableInteractions();
-      setupExplorerEvents();
-      setupKeyboardShortcuts();
-      setupFaqAccordion();
-      setupGlossaryTooltips();
-      setupSectorToggle();
-      setupShortcutsExpand();
-    }
-
-    function setupKeyboardShortcuts() {
-      document.addEventListener("keydown", (e) => {
-        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
-        if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-          document.getElementById("topSearch").focus();
-        }
-        if (SECTION_SHORTCUTS[e.key]) {
-          scrollToSection(SECTION_SHORTCUTS[e.key]);
-        }
-        if (e.key === "Escape") {
-          state.filters.search = "";
-          state.filters.risk = "all";
-          state.filters.sector = null;
-          document.getElementById("topSearch").value = "";
-          renderLeaderboard();
-        }
-      });
-    }
-
-    function setupShortcutsExpand() {
-      const btn = document.getElementById("shortcutsToggleBtn");
-      const content = document.getElementById("shortcutsContent");
-      if (!btn || !content) return;
-      btn.addEventListener("click", () => {
-        content.classList.toggle("open");
-        btn.textContent = content.classList.contains("open") ? "Keyboard shortcuts ▾" : "Keyboard shortcuts ▸";
-      });
-    }
-
-    function setupFaqAccordion() {
-      const accordion = document.getElementById("faqAccordion");
-      if (!accordion) return;
-      accordion.addEventListener("click", (e) => {
-        const btn = e.target.closest(".faq-question");
-        if (!btn) return;
-        const item = btn.closest(".faq-item");
-        const wasOpen = item.classList.contains("open");
-        accordion.querySelectorAll(".faq-item.open").forEach((el) => el.classList.remove("open"));
-        if (!wasOpen) item.classList.add("open");
-      });
-    }
-
-    function setupGlossaryTooltips() {
-      document.addEventListener("touchstart", (e) => {
-        const term = e.target.closest(".term");
-        document.querySelectorAll(".term.tooltip-active").forEach((el) => {
-          if (el !== term) el.classList.remove("tooltip-active");
-        });
-        if (term) {
-          e.preventDefault();
-          term.classList.toggle("tooltip-active");
-        }
-      }, { passive: false });
-    }
-
-    init();
-  </script>
+})();
+</script>
 </body>
 </html>
